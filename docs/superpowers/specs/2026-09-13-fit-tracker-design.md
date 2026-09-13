@@ -26,7 +26,7 @@ rewritten by the running app.
   the one-time import script or manual editing in-app.
 - No generic markdown-routine parser — the import script is written against
   this specific document's structure.
-- No automated E2E/UI test suite (see §10).
+- No automated E2E/UI test suite (see §11).
 
 ## 3. Architecture
 
@@ -80,6 +80,7 @@ the database for a given user.
 | weekday_schedule | jsonb | see below |
 | is_active | boolean | exactly one active routine per user at a time |
 | started_at | timestamptz | when this routine became active |
+| is_deleted | boolean, default false | soft delete — see §6 |
 
 `weekday_schedule` maps weekdays to a `routine_day_id`, with an alternation
 form for days that rotate between two day-templates (e.g. the document's
@@ -107,6 +108,7 @@ distinct set of exercises, so it isn't modeled as its own `routine_days` row.
 | name | text | e.g. "Día A", "Upper", "Core" |
 | order_index | int | display order only |
 | is_rest_day | boolean | true only for genuine no-training days (e.g. Phase 2 Wednesday) |
+| is_deleted | boolean, default false | soft delete — see §6 |
 
 **`routine_exercises`** — one row per exercise line within a day.
 | column | type | notes |
@@ -127,6 +129,7 @@ distinct set of exercises, so it isn't modeled as its own `routine_days` row.
 | backoff_sets | int, nullable | |
 | backoff_rep_min | int, nullable | |
 | backoff_rep_max | int, nullable | |
+| is_deleted | boolean, default false | soft delete — see §6 |
 
 ### Progress state (mutable, drives overload suggestions)
 
@@ -216,7 +219,46 @@ Unique constraint on `(user_id, exercise_id)`.
 7. Does not touch `user_exercise_state` — starting weights are entered by
    the user the first time they train each exercise from the app.
 
-## 6. Client logging flow
+## 6. Routine management (CRUD)
+
+The MVP includes full create/edit/delete for routines via in-app forms, not
+just the one-time import — the imported Full Body / Split routines are
+regular data the user can then edit like any routine they build themselves.
+
+**Screens:**
+- **Routines list** — every routine for the user, active one flagged, with
+  actions to activate, edit, or delete.
+- **Routine editor** — name, `uses_top_set_backoff`, `suggested_duration_weeks`,
+  `next_routine_id` (picked from the user's other routines), and the list of
+  days (add/remove/reorder).
+- **Day editor** — name, `is_rest_day`, and the list of exercises
+  (add/remove/reorder).
+- **Exercise form** — pick an existing `exercises` entry or type a new name
+  (adding it to the shared catalog), `role`, `scheme_type`, `rep_unit`, and
+  the scheme fields relevant to the chosen `scheme_type` (the form only
+  shows `rep_min`/`rep_max`/`rir_min`/`rir_max` for `normal`, or
+  `top_set_reps`/`backoff_*` for `top_set_backoff`). Basic validation:
+  `rep_min <= rep_max`, `rir_min <= rir_max`, required fields per scheme
+  type.
+
+**Deletion is a soft delete** (`is_deleted = true`) on `routines`,
+`routine_days`, and `routine_exercises`, not a hard row delete. All reads
+filter `is_deleted = false`. This is because `workout_sessions` /
+`logged_sets` reference these rows as historical fact (what you actually
+trained against on a given day) — hard-deleting would either cascade and
+destroy training history, or require restrict-with-a-fallback logic that
+soft delete avoids entirely. Deleting a routine cascades the soft-delete
+flag to its days and exercises.
+
+**Simplification (documented, not solved):** editing an existing
+`routine_exercise`'s scheme (e.g. raising `rep_max` from 10 to 12) mutates
+that row in place. Past `logged_sets` stay linked to it, so if you later
+look at old history, it's evaluated against the *current* target, not the
+target that was active when you logged it. Versioning scheme changes over
+time would fix this but isn't justified for MVP; revisit if it becomes a
+real problem.
+
+## 7. Client logging flow
 
 1. **Home** shows the active routine, current week number, and today's
    resolved day (via `weekday_schedule`). "Empezar entrenamiento" creates a
@@ -231,17 +273,17 @@ Unique constraint on `(user_id, exercise_id)`.
    optimistically; it syncs to Supabase right away if online, or stays
    queued if not.
 4. There is no separate "accept suggestion" dialog: completing an exercise
-   recomputes `suggested_next_weight` (§7), and that value simply prefills
+   recomputes `suggested_next_weight` (§8), and that value simply prefills
    the weight field the next time this exercise comes up — editing that
    field before logging *is* the override.
 5. "Terminar entrenamiento" marks the session `completed`. At that point
-   (and on every Home load) deload and routine-switch conditions (§7) are
+   (and on every Home load) deload and routine-switch conditions (§8) are
    evaluated; if triggered, a dismissible banner offers Aceptar/Ignorar.
 6. Home and the session screen always read the local cache first, so both
    are usable offline; a connectivity listener flushes `pending_writes` and
    refreshes the cache on reconnect or app foreground.
 
-## 7. Progression, deload, and routine-switch logic
+## 8. Progression, deload, and routine-switch logic
 
 All of this is computed on read from `logged_sets` / `routine_history` —
 there is no persisted "pending suggestion" table.
@@ -271,7 +313,7 @@ new one `is_active = true, started_at = now`, and inserts a `routine_history`
 "started" row. Accepting a deload suggestion inserts a `routine_history`
 "deload" row for the current routine.
 
-## 8. Auth and multi-user
+## 9. Auth and multi-user
 
 - Supabase Auth, email/password only (no social login, no magic link).
 - Session persisted via `AsyncStorage` so the user stays logged in across
@@ -287,7 +329,7 @@ new one `is_active = true, started_at = now`, and inserts a `routine_history`
   at this scope.
 - No admin role, no cross-user visibility.
 
-## 9. Offline sync
+## 10. Offline sync
 
 - Reads: Home and session screens always read the local SQLite cache first.
 - Writes: every set/session write goes to `pending_writes` immediately and
@@ -299,13 +341,13 @@ new one `is_active = true, started_at = now`, and inserts a `routine_history`
   sole writer of their own data and writes are append-only (new sessions/
   sets), so there is no merge logic beyond "retry until it lands."
 
-## 10. Testing strategy
+## 11. Testing strategy
 
 Automated testing is concentrated on the domain logic most likely to fail
 silently and produce a wrong recommendation:
 
 1. **Unit tests (Jest) for the progression/deload/routine-switch
-   calculations** (§7) — pure functions over `logged_sets` /
+   calculations** (§8) — pure functions over `logged_sets` /
    `routine_history` data, covering edge cases (RIR exactly at the boundary,
    reps exactly at `rep_min`/`rep_max`, exactly two consecutive misses,
    `suggested_duration_weeks` boundary).
@@ -319,7 +361,7 @@ silently and produce a wrong recommendation:
    behavior are verified manually before considering a feature done — not
    worth the maintenance cost for a single-developer personal app.
 
-## 11. Open items for the implementation plan
+## 12. Open items for the implementation plan
 
 - Exact Postgres migration files / RLS policy SQL.
 - Expo project scaffold, navigation structure, and screen-level UI details.
