@@ -16,6 +16,10 @@ node_modules/
 .env.local
 .env.*.local
 
+# Supabase
+supabase/.branches
+supabase/.temp
+
 # IDE
 .idea
 .vscode
