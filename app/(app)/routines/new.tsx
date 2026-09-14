@@ -89,6 +89,7 @@ export default function NewRoutine() {
 
         {addingDay ? (
           <View style={styles.addDayForm}>
+            <Text style={styles.label}>Nombre del día</Text>
             <TextInput
               style={styles.input}
               placeholder="Ej: Día A, Empuje, Piernas..."
@@ -120,6 +121,7 @@ export default function NewRoutine() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Nueva rutina</Text>
       <Text style={styles.stepHint}>Paso 1 de 2: datos generales de la rutina.</Text>
+      <Text style={styles.label}>Nombre</Text>
       <TextInput
         style={styles.input}
         placeholder="Ej: Fuerza 5x5, Push/Pull/Legs..."
@@ -132,9 +134,10 @@ export default function NewRoutine() {
         <Switch value={usesTopSetBackoff} onValueChange={setUsesTopSetBackoff} />
       </View>
 
+      <Text style={styles.label}>Duración sugerida (semanas, opcional)</Text>
       <TextInput
         style={styles.input}
-        placeholder="Ej: 8 (duración sugerida en semanas, opcional)"
+        placeholder="Ej: 8"
         keyboardType="number-pad"
         value={suggestedDurationWeeks}
         onChangeText={setSuggestedDurationWeeks}
@@ -170,6 +173,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
   stepHint: { color: '#666', marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
+  label: { fontWeight: '600', marginTop: 4 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pickerSection: { gap: 6 },
   pickerLabel: { fontWeight: '600' },

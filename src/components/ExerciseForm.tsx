@@ -137,6 +137,7 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
 
   return (
     <View style={styles.form}>
+      <Text style={styles.label}>Nombre del ejercicio</Text>
       <TextInput
         style={styles.input}
         placeholder="Ej: Press banca, Sentadilla, Remo..."
@@ -219,23 +220,26 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
 
       {values.schemeType === 'normal' ? (
         <>
+          <Text style={styles.label}>Series</Text>
           <TextInput
             style={styles.input}
-            placeholder="Series"
+            placeholder="Ej: 3"
             keyboardType="number-pad"
             value={values.sets}
             onChangeText={(text) => update('sets', text)}
           />
+          <Text style={styles.label}>Reps mínimas</Text>
           <TextInput
             style={styles.input}
-            placeholder="Reps mínimas"
+            placeholder="Ej: 8"
             keyboardType="number-pad"
             value={values.repMin}
             onChangeText={(text) => update('repMin', text)}
           />
+          <Text style={styles.label}>Reps máximas</Text>
           <TextInput
             style={styles.input}
-            placeholder="Reps máximas"
+            placeholder="Ej: 12"
             keyboardType="number-pad"
             value={values.repMax}
             onChangeText={(text) => update('repMax', text)}
@@ -243,30 +247,34 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
         </>
       ) : (
         <>
+          <Text style={styles.label}>Reps del top set</Text>
           <TextInput
             style={styles.input}
-            placeholder="Reps del top set"
+            placeholder="Ej: 5"
             keyboardType="number-pad"
             value={values.topSetReps}
             onChangeText={(text) => update('topSetReps', text)}
           />
+          <Text style={styles.label}>Series de back-off</Text>
           <TextInput
             style={styles.input}
-            placeholder="Series de back-off"
+            placeholder="Ej: 3"
             keyboardType="number-pad"
             value={values.backoffSets}
             onChangeText={(text) => update('backoffSets', text)}
           />
+          <Text style={styles.label}>Reps mínimas de back-off</Text>
           <TextInput
             style={styles.input}
-            placeholder="Reps mínimas de back-off"
+            placeholder="Ej: 8"
             keyboardType="number-pad"
             value={values.backoffRepMin}
             onChangeText={(text) => update('backoffRepMin', text)}
           />
+          <Text style={styles.label}>Reps máximas de back-off</Text>
           <TextInput
             style={styles.input}
-            placeholder="Reps máximas de back-off"
+            placeholder="Ej: 12"
             keyboardType="number-pad"
             value={values.backoffRepMax}
             onChangeText={(text) => update('backoffRepMax', text)}
@@ -274,16 +282,18 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
         </>
       )}
 
+      <Text style={styles.label}>RIR mínimo (opcional)</Text>
       <TextInput
         style={styles.input}
-        placeholder="RIR mínimo (opcional)"
+        placeholder="Ej: 1"
         keyboardType="number-pad"
         value={values.rirMin}
         onChangeText={(text) => update('rirMin', text)}
       />
+      <Text style={styles.label}>RIR máximo (opcional)</Text>
       <TextInput
         style={styles.input}
-        placeholder="RIR máximo (opcional)"
+        placeholder="Ej: 3"
         keyboardType="number-pad"
         value={values.rirMax}
         onChangeText={(text) => update('rirMax', text)}

@@ -123,6 +123,7 @@ export default function RoutineEditor() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.label}>Nombre</Text>
       <TextInput
         style={styles.input}
         placeholder="Ej: Fuerza 5x5, Push/Pull/Legs..."
@@ -135,9 +136,10 @@ export default function RoutineEditor() {
         <Switch value={usesTopSetBackoff} onValueChange={setUsesTopSetBackoff} />
       </View>
 
+      <Text style={styles.label}>Duración sugerida (semanas, opcional)</Text>
       <TextInput
         style={styles.input}
-        placeholder="Ej: 8 (duración sugerida en semanas, opcional)"
+        placeholder="Ej: 8"
         keyboardType="number-pad"
         value={suggestedDurationWeeks}
         onChangeText={setSuggestedDurationWeeks}
@@ -190,6 +192,7 @@ export default function RoutineEditor() {
 
       {addingDay ? (
         <View style={styles.addDayForm}>
+          <Text style={styles.label}>Nombre del día</Text>
           <TextInput
             style={styles.input}
             placeholder="Ej: Día A, Empuje, Piernas..."
@@ -217,6 +220,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, gap: 12 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
+  label: { fontWeight: '600', marginTop: 4 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pickerSection: { gap: 6 },
   pickerLabel: { fontWeight: '600' },

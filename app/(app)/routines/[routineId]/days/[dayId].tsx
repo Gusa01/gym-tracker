@@ -54,6 +54,7 @@ export default function DayEditor() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.label}>Nombre del día</Text>
       <TextInput
         style={styles.input}
         placeholder="Ej: Día A, Empuje, Piernas..."
@@ -77,6 +78,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, gap: 12 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
+  label: { fontWeight: '600', marginTop: 4 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   error: { color: '#dc2626' },
   button: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center' },
