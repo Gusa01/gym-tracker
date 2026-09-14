@@ -18,7 +18,10 @@
     "sourceMap": true,
     "strict": true,
     "jsx": "react-jsx",
-    "types": ["jest", "node"],
+    "types": [
+      "jest",
+      "node"
+    ],
     "paths": {
       "@/*": [
         "./*"
@@ -28,9 +31,12 @@
   "include": [
     "app",
     "components",
-    "tests"
+    "tests",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
