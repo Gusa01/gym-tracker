@@ -73,13 +73,23 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
   const [values, setValues] = useState<ExerciseFormValues>(initialValues(initial));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [browseFilter, setBrowseFilter] = useState<'upper' | 'lower' | 'core' | null>(null);
 
+  const typedName = values.exerciseName.trim().toLowerCase();
   const suggestions =
-    values.exerciseName.trim().length > 0
+    typedName.length > 0 || browseFilter
       ? exercises
-          .filter((e) => e.name.toLowerCase().includes(values.exerciseName.trim().toLowerCase()))
-          .slice(0, 5)
+          .filter((e) => !browseFilter || e.muscle_group === browseFilter)
+          .filter((e) => !typedName || e.name.toLowerCase().includes(typedName))
+          .slice(0, browseFilter ? 20 : 5)
       : [];
+
+  function selectSuggestion(exercise: Exercise) {
+    update('exerciseName', exercise.name);
+    if (exercise.muscle_group === 'upper' || exercise.muscle_group === 'lower' || exercise.muscle_group === 'core') {
+      update('muscleGroup', exercise.muscle_group);
+    }
+  }
 
   function update<K extends keyof ExerciseFormValues>(key: K, value: ExerciseFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -129,18 +139,36 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
     <View style={styles.form}>
       <TextInput
         style={styles.input}
-        placeholder="Nombre del ejercicio"
+        placeholder="Ej: Press banca, Sentadilla, Remo..."
         value={values.exerciseName}
         onChangeText={(text) => update('exerciseName', text)}
       />
+
+      <Text style={styles.label}>Explorar ejercicios comunes</Text>
+      <View style={styles.segmented}>
+        {(['upper', 'lower', 'core'] as const).map((option) => (
+          <Pressable
+            key={option}
+            style={[styles.segment, browseFilter === option && styles.segmentSelected]}
+            onPress={() => setBrowseFilter(browseFilter === option ? null : option)}
+          >
+            <Text style={browseFilter === option ? styles.segmentTextSelected : styles.segmentText}>{option}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       {suggestions.length > 0 && (
         <View style={styles.suggestions}>
           {suggestions.map((s) => (
-            <Pressable key={s.id} onPress={() => update('exerciseName', s.name)} style={styles.suggestionRow}>
+            <Pressable key={s.id} onPress={() => selectSuggestion(s)} style={styles.suggestionRow}>
               <Text>{s.name}</Text>
+              <Text style={styles.suggestionMeta}>{s.muscle_group}</Text>
             </Pressable>
           ))}
         </View>
+      )}
+      {browseFilter && suggestions.length === 0 && (
+        <Text style={styles.hint}>No hay ejercicios cargados todavía en "{browseFilter}".</Text>
       )}
 
       <Text style={styles.label}>Grupo muscular</Text>
@@ -279,7 +307,15 @@ const styles = StyleSheet.create({
   form: { gap: 10, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10 },
   suggestions: { borderWidth: 1, borderColor: '#eee', borderRadius: 8 },
-  suggestionRow: { padding: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  suggestionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  suggestionMeta: { color: '#666', fontSize: 12 },
+  hint: { color: '#666', fontSize: 12, fontStyle: 'italic' },
   label: { fontWeight: '600', marginTop: 4 },
   segmented: { flexDirection: 'row', gap: 6 },
   segment: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10 },
