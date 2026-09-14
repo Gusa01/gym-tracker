@@ -123,7 +123,12 @@ export default function RoutineEditor() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TextInput style={styles.input} placeholder="Nombre" value={name} onChangeText={setName} />
+      <TextInput
+        style={styles.input}
+        placeholder="Ej: Fuerza 5x5, Push/Pull/Legs..."
+        value={name}
+        onChangeText={setName}
+      />
 
       <View style={styles.switchRow}>
         <Text>Usa top set / back-off</Text>
@@ -132,7 +137,7 @@ export default function RoutineEditor() {
 
       <TextInput
         style={styles.input}
-        placeholder="Duración sugerida (semanas, opcional)"
+        placeholder="Ej: 8 (duración sugerida en semanas, opcional)"
         keyboardType="number-pad"
         value={suggestedDurationWeeks}
         onChangeText={setSuggestedDurationWeeks}
@@ -187,7 +192,7 @@ export default function RoutineEditor() {
         <View style={styles.addDayForm}>
           <TextInput
             style={styles.input}
-            placeholder="Nombre del día"
+            placeholder="Ej: Día A, Empuje, Piernas..."
             value={newDayName}
             onChangeText={setNewDayName}
           />
