@@ -1,0 +1,83 @@
+import { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { getDatabase } from '../../../src/lib/sqlite/db';
+import { resolveToday } from '../../../src/lib/sqlite/cache';
+import { clearCurrentSession } from '../../../src/lib/sessions/currentSessionStorage';
+import { useSessionSets } from '../../../src/hooks/useSessionSets';
+import { SessionExerciseCard } from '../../../src/components/SessionExerciseCard';
+
+export default function SessionScreen() {
+  const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const { dayName, exercises, loggedSets, weightByExercise, loading, error, loadForDay, logSet, completeSession } =
+    useSessionSets(sessionId);
+  const [resolvedDayName, setResolvedDayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const resolved = resolveToday(getDatabase());
+    if (!resolved || !resolved.day) return;
+    setResolvedDayName(resolved.day.name);
+    loadForDay(resolved.day.id, resolved.day.name);
+  }, [loadForDay]);
+
+  async function handleFinish() {
+    await completeSession();
+    await clearCurrentSession();
+    router.replace('/(app)' as any);
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Cargando...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>{resolvedDayName ?? dayName ?? 'Entrenamiento'}</Text>
+
+      {exercises.map((exercise) => (
+        <SessionExerciseCard
+          key={exercise.id}
+          exercise={exercise}
+          initialWeight={weightByExercise[exercise.id] ?? null}
+          loggedSets={loggedSets}
+          onLogSet={(setIndex, setType, weight, reps, rir) =>
+            logSet(exercise.id, setIndex, setType, weight, reps, rir)
+          }
+        />
+      ))}
+
+      <Pressable
+        style={styles.finishButton}
+        onPress={() =>
+          Alert.alert('Terminar entrenamiento', '¿Marcar esta sesión como completada?', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Terminar', onPress: handleFinish },
+          ])
+        }
+      >
+        <Text style={styles.finishButtonText}>Terminar entrenamiento</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  content: { padding: 16, gap: 12 },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
+  error: { color: '#dc2626' },
+  finishButton: { backgroundColor: '#16a34a', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8 },
+  finishButtonText: { color: '#fff', fontWeight: '700' },
+});
