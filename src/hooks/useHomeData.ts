@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../lib/supabase';
 import { useAuthSession } from './useAuthSession';
@@ -78,37 +78,44 @@ export function useHomeData() {
     load();
   }, [load]);
 
+  const startingRef = useRef(false);
+
   const startOrResumeSession = useCallback(async (): Promise<string | null> => {
     if (!userId || !todayDayId) return null;
+    if (startingRef.current) return null;
+    startingRef.current = true;
+    try {
+      const pointer = await loadCurrentSession();
+      if (pointer && pointer.dayId === todayDayId && pointer.sessionDate === formatDateOnly(new Date())) {
+        return pointer.sessionId;
+      }
 
-    const pointer = await loadCurrentSession();
-    if (pointer && pointer.dayId === todayDayId && pointer.sessionDate === formatDateOnly(new Date())) {
-      return pointer.sessionId;
+      const today = new Date();
+      const sessionDate = formatDateOnly(today);
+      const week = weekNumber ?? 1;
+
+      const existing = await getSessionForDate(supabase, userId, todayDayId, sessionDate).catch(() => null);
+      if (existing) {
+        await saveCurrentSession({ sessionId: existing.id, dayId: todayDayId, sessionDate, weekNumber: week });
+        return existing.id;
+      }
+
+      const sessionId = Crypto.randomUUID();
+      const payload = {
+        id: sessionId,
+        user_id: userId,
+        routine_day_id: todayDayId,
+        session_date: sessionDate,
+        week_number: week,
+        status: 'in_progress' as const,
+      };
+      enqueueWrite(getDatabase(), sessionId, 'workout_sessions', payload);
+      await saveCurrentSession({ sessionId, dayId: todayDayId, sessionDate, weekNumber: week });
+      syncNow(getDatabase(), supabase, userId).catch(() => {});
+      return sessionId;
+    } finally {
+      startingRef.current = false;
     }
-
-    const today = new Date();
-    const sessionDate = formatDateOnly(today);
-    const week = weekNumber ?? 1;
-
-    const existing = await getSessionForDate(supabase, userId, todayDayId, sessionDate).catch(() => null);
-    if (existing) {
-      await saveCurrentSession({ sessionId: existing.id, dayId: todayDayId, sessionDate, weekNumber: week });
-      return existing.id;
-    }
-
-    const sessionId = Crypto.randomUUID();
-    const payload = {
-      id: sessionId,
-      user_id: userId,
-      routine_day_id: todayDayId,
-      session_date: sessionDate,
-      week_number: week,
-      status: 'in_progress' as const,
-    };
-    enqueueWrite(getDatabase(), sessionId, 'workout_sessions', payload);
-    await saveCurrentSession({ sessionId, dayId: todayDayId, sessionDate, weekNumber: week });
-    syncNow(getDatabase(), supabase, userId).catch(() => {});
-    return sessionId;
   }, [userId, todayDayId, weekNumber]);
 
   return {
