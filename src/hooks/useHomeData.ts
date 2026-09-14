@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../lib/supabase';
 import { useAuthSession } from './useAuthSession';
@@ -8,7 +9,7 @@ import { formatDateOnly } from '../lib/sessions/weekResolution';
 import { getSessionForDate } from '../lib/sessions/queries';
 import { saveCurrentSession, loadCurrentSession } from '../lib/sessions/currentSessionStorage';
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
-import { syncNow } from '../lib/sync/syncService';
+import { flushOnly, syncNow } from '../lib/sync/syncService';
 
 type SessionStatus = 'none' | 'in_progress' | 'completed';
 
@@ -62,8 +63,17 @@ export function useHomeData() {
 
       if (!day.is_rest_day) {
         const today = new Date();
-        const existing = await getSessionForDate(supabase, userId, day.id, formatDateOnly(today)).catch(() => null);
-        setSessionStatus(existing ? (existing.status === 'completed' ? 'completed' : 'in_progress') : 'none');
+        const todayStr = formatDateOnly(today);
+        // Local-first: a pointer for today is authoritative, so an offline completion is
+        // still recognized here instead of offering to start a duplicate session.
+        const pointer = await loadCurrentSession();
+        const pointerMatchesToday = pointer && pointer.dayId === day.id && pointer.sessionDate === todayStr;
+        if (pointerMatchesToday) {
+          setSessionStatus(pointer!.status === 'completed' ? 'completed' : 'in_progress');
+        } else {
+          const existing = await getSessionForDate(supabase, userId, day.id, todayStr).catch(() => null);
+          setSessionStatus(existing ? (existing.status === 'completed' ? 'completed' : 'in_progress') : 'none');
+        }
       } else {
         setSessionStatus('none');
       }
@@ -74,9 +84,11 @@ export function useHomeData() {
     }
   }, [userId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const startingRef = useRef(false);
 
@@ -111,7 +123,7 @@ export function useHomeData() {
       };
       enqueueWrite(getDatabase(), sessionId, 'workout_sessions', payload);
       await saveCurrentSession({ sessionId, dayId: todayDayId, sessionDate, weekNumber: week });
-      syncNow(getDatabase(), supabase, userId).catch(() => {});
+      flushOnly(getDatabase(), supabase).catch(() => {});
       return sessionId;
     } finally {
       startingRef.current = false;

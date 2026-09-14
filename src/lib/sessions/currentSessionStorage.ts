@@ -7,6 +7,7 @@ export interface CurrentSessionPointer {
   dayId: string;
   sessionDate: string;
   weekNumber: number;
+  status?: 'in_progress' | 'completed';
 }
 
 export async function saveCurrentSession(pointer: CurrentSessionPointer): Promise<void> {

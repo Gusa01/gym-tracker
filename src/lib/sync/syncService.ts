@@ -6,13 +6,17 @@ import { listPendingWrites, removePendingWrite, incrementAttempts } from '../sql
 import { refreshLocalCache } from '../sqlite/cache';
 import { flushPendingWrites } from './flushQueue';
 
-export async function syncNow(db: SQLiteDatabase, supabase: SupabaseClient, userId: string): Promise<void> {
+/** Flushes the pending write queue without re-downloading the routine cache. */
+export async function flushOnly(db: SQLiteDatabase, supabase: SupabaseClient): Promise<void> {
   const writes = listPendingWrites(db);
-  if (writes.length > 0) {
-    const { succeededIds, failedIds } = await flushPendingWrites(supabase, writes);
-    succeededIds.forEach((id) => removePendingWrite(db, id));
-    failedIds.forEach((id) => incrementAttempts(db, id));
-  }
+  if (writes.length === 0) return;
+  const { succeededIds, failedIds } = await flushPendingWrites(supabase, writes);
+  succeededIds.forEach((id) => removePendingWrite(db, id));
+  failedIds.forEach((id) => incrementAttempts(db, id));
+}
+
+export async function syncNow(db: SQLiteDatabase, supabase: SupabaseClient, userId: string): Promise<void> {
+  await flushOnly(db, supabase);
   await refreshLocalCache(db, supabase, userId);
 }
 

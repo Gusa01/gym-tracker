@@ -3,13 +3,12 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-nati
 import { router, useLocalSearchParams } from 'expo-router';
 import { getDatabase } from '../../../src/lib/sqlite/db';
 import { resolveToday } from '../../../src/lib/sqlite/cache';
-import { clearCurrentSession } from '../../../src/lib/sessions/currentSessionStorage';
 import { useSessionSets } from '../../../src/hooks/useSessionSets';
 import { SessionExerciseCard } from '../../../src/components/SessionExerciseCard';
 
 export default function SessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const { dayName, exercises, loggedSets, weightByExercise, loading, error, loadForDay, logSet, completeSession } =
+  const { dayName, exercises, loggedSets, weightByExercise, loading, loadForDay, logSet, completeSession } =
     useSessionSets(sessionId);
   const [resolvedDayName, setResolvedDayName] = useState<string | null>(null);
 
@@ -22,16 +21,7 @@ export default function SessionScreen() {
 
   async function handleFinish() {
     await completeSession();
-    await clearCurrentSession();
     router.replace('/(app)' as any);
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.error}>{error}</Text>
-      </View>
-    );
   }
 
   if (loading) {
@@ -77,7 +67,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, gap: 12 },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  error: { color: '#dc2626' },
   finishButton: { backgroundColor: '#16a34a', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8 },
   finishButtonText: { color: '#fff', fontWeight: '700' },
 });

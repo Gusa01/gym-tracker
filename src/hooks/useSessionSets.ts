@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase';
 import { getDatabase } from '../lib/sqlite/db';
 import { getCachedDayExercises, getCachedExerciseState, CachedRoutineExercise } from '../lib/sqlite/cache';
 import { listSessionSets } from '../lib/sessions/queries';
+import { loadCurrentSession, saveCurrentSession } from '../lib/sessions/currentSessionStorage';
 import { LoggedSet, SetType } from '../lib/sessions/types';
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
-import { syncNow } from '../lib/sync/syncService';
+import { flushOnly } from '../lib/sync/syncService';
 import { useAuthSession } from './useAuthSession';
 
 export function useSessionSets(sessionId: string | undefined) {
@@ -18,17 +19,15 @@ export function useSessionSets(sessionId: string | undefined) {
   const [loggedSets, setLoggedSets] = useState<LoggedSet[]>([]);
   const [weightByExercise, setWeightByExercise] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
     setLoading(true);
-    setError(null);
     try {
-      const sets = await listSessionSets(supabase, sessionId);
+      // Offline (or any read failure) degrades to an unknown/empty checklist rather than
+      // blocking the whole session screen; sync catches up once connectivity returns.
+      const sets = await listSessionSets(supabase, sessionId).catch(() => []);
       setLoggedSets(sets);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar la sesión.');
     } finally {
       setLoading(false);
     }
@@ -73,15 +72,19 @@ export function useSessionSets(sessionId: string | undefined) {
     };
     enqueueWrite(getDatabase(), id, 'logged_sets', payload);
     setLoggedSets((prev) => [...prev, payload as LoggedSet]);
-    if (userId) syncNow(getDatabase(), supabase, userId).catch(() => {});
+    if (userId) flushOnly(getDatabase(), supabase).catch(() => {});
   }
 
   async function completeSession() {
     if (!sessionId) return;
     const id = Crypto.randomUUID();
     enqueueWrite(getDatabase(), id, 'workout_sessions', { id: sessionId, status: 'completed' });
-    if (userId) await syncNow(getDatabase(), supabase, userId).catch(() => {});
+    const pointer = await loadCurrentSession();
+    if (pointer && pointer.sessionId === sessionId) {
+      await saveCurrentSession({ ...pointer, status: 'completed' });
+    }
+    if (userId) await flushOnly(getDatabase(), supabase).catch(() => {});
   }
 
-  return { dayName, exercises, loggedSets, weightByExercise, loading, error, loadForDay, logSet, completeSession };
+  return { dayName, exercises, loggedSets, weightByExercise, loading, loadForDay, logSet, completeSession };
 }
