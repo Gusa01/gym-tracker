@@ -4,9 +4,11 @@
 
 **Goal:** Stand up the Expo app skeleton, the full Supabase (Postgres + Auth) schema with Row Level Security, working email/password auth, and a local SQLite cache scaffold — the foundation later plans (import + CRUD, workout logging + offline sync, progression engine) build on.
 
-**Architecture:** Expo (React Native, TypeScript, Expo Router) client talking to a local Supabase instance (Postgres + GoTrue Auth) via `@supabase/supabase-js`, with session persisted in `AsyncStorage`. All eight tables from the design spec are created now (even though only auth is exercised end-to-end in this plan) so RLS can be verified against the real schema. A local SQLite database is scaffolded for the offline cache/write-queue that Plan 3 will use.
+**Architecture:** Expo (React Native, TypeScript, Expo Router) client talking to a hosted Supabase project (Postgres + GoTrue Auth, free tier) via `@supabase/supabase-js`, with session persisted in `AsyncStorage`. All eight tables from the design spec are created now (even though only auth is exercised end-to-end in this plan) so RLS can be verified against the real schema. A local SQLite database is scaffolded for the offline cache/write-queue that Plan 3 will use.
 
-**Tech Stack:** Expo SDK (latest, TypeScript + Expo Router default template), Supabase CLI (local dev via Docker), `@supabase/supabase-js`, `@react-native-async-storage/async-storage`, `expo-sqlite`, Jest + `ts-jest` (Node-environment tests only).
+**Tech Stack:** Expo SDK (latest, TypeScript + Expo Router default template), Supabase CLI (linked to a hosted project — no Docker required), `@supabase/supabase-js`, `@react-native-async-storage/async-storage`, `expo-sqlite`, Jest + `ts-jest` (Node-environment tests only).
+
+**Infra note (pivoted mid-Task-2):** the plan originally called for `supabase start` running Postgres/Auth locally via Docker. Docker Desktop is not available on this machine, so the schema/RLS/auth work in this plan runs against a real hosted Supabase project (free tier) instead. Practical differences from the original local-Docker design: (1) `.env.local` holds real project secrets, not fixed local-dev demo keys — it must never be committed and its values must never appear in any tool output or report; (2) migrations apply via `npx supabase db push` (cumulative) instead of `npx supabase db reset` (wipe-and-reapply-from-zero) — each task's migration is still additive and independently testable, it just can't be re-verified "from a clean slate" the way a local reset allows; (3) test data (users, exercises, routines) that Jest creates lands in the real hosted project — the tests already clean up what they create in `afterAll`, but this is worth knowing since it's not a disposable local container anymore.
 
 **Spec:** `docs/superpowers/specs/2026-09-13-fit-tracker-design.md`
 
@@ -63,7 +65,7 @@ git commit -m "chore: scaffold Expo app with Expo Router"
 
 ---
 
-### Task 2: Local Supabase dev environment
+### Task 2: Hosted Supabase project setup
 
 **Files:**
 - Create: `supabase/config.toml` and `supabase/migrations/` (via `supabase init`)
@@ -71,8 +73,8 @@ git commit -m "chore: scaffold Expo app with Expo Router"
 - Modify: `.gitignore`
 
 **Interfaces:**
-- Consumes: Docker Desktop (must be installed and running)
-- Produces: a running local Supabase stack at `http://127.0.0.1:54321` (API) with Postgres, Auth, and Studio; `.env.local` (gitignored) holding connection details later tasks read
+- Consumes: a hosted Supabase project (created manually by the human operator — see Step 2, not automatable) and its credentials in `.env.local`
+- Produces: a linked Supabase CLI project; `.env.local` (gitignored, never touched by an agent) holding `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` that later tasks read
 
 - [ ] **Step 1: Install the Supabase CLI as a dev dependency**
 
@@ -80,55 +82,51 @@ git commit -m "chore: scaffold Expo app with Expo Router"
 npm install --save-dev supabase
 ```
 
-- [ ] **Step 2: Initialize the Supabase project**
+- [ ] **Step 2 (human operator only — not for an agent to run): create the hosted project**
+
+This step involves real account credentials and must be done by a person, not delegated to an implementer subagent:
+
+1. Go to supabase.com, sign in (or create an account), and create a new project — name it "fit-tracker", pick any region, and set a database password (save it somewhere durable, e.g. a password manager — it's needed again below).
+2. Wait for provisioning (~2 minutes).
+3. In the dashboard: **Settings → API** gives the Project URL and the `anon` `public` key. **Settings → API** also shows the `service_role` `secret` key (click reveal). The project ref is the subdomain in the Project URL (`https://<ref>.supabase.co`) and also shown in **Settings → General**.
+4. **Settings → Authentication → Sign In / Providers → Email**: turn off "Confirm email" so `supabase.auth.signUp()` returns a usable session immediately (equivalent of local dev's `enable_confirmations = false`).
+5. Create `.env.local` in the repo root **yourself, directly, with a text editor** — not via a command whose output could be logged, and not by asking an agent to write it — with:
+
+```
+EXPO_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role secret key>
+SUPABASE_PROJECT_REF=<ref>
+SUPABASE_DB_PASSWORD=<the database password you set in step 1>
+```
+
+This keeps the real secrets out of any agent's context, any tool output, and this conversation.
+
+- [ ] **Step 3: Link the local repo to the hosted project**
 
 ```bash
-npx supabase init
+npx supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 ```
 
-This creates `supabase/config.toml` and an empty `supabase/migrations/` directory.
+(Reads both values from `.env.local` — make sure it's sourced/loaded into the shell environment first, e.g. `set -a; source .env.local; set +a` in bash.) Expected: "Finished supabase link."
 
-- [ ] **Step 3: Disable email confirmation for local dev**
+- [ ] **Step 4: Create `.env.example`**
 
-Open `supabase/config.toml`, find the `[auth.email]` section, and set:
-
-```toml
-enable_confirmations = false
-```
-
-This lets `supabase.auth.signUp()` return a usable session immediately in local dev, without needing to click a confirmation link.
-
-- [ ] **Step 4: Start the local stack**
-
-Requires Docker Desktop running. Run:
-
-```bash
-npx supabase start
-```
-
-Expected: after downloading images (first run only), it prints a table of local URLs and keys (API URL, DB URL, Studio URL, anon key, service_role key).
-
-- [ ] **Step 5: Record the local credentials**
-
-Create `.env.local` in the repo root (this file is gitignored, never committed):
+Create `.env.example` at the repo root with the same keys but empty values, and commit only this file (never `.env.local`):
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<paste "anon key" from the previous step>
-SUPABASE_SERVICE_ROLE_KEY=<paste "service_role key" from the previous step>
-```
-
-Create `.env.example` with the same keys but empty values, and a comment, then commit only this file:
-
-```
-# Copy this file to .env.local and fill in the values from `npx supabase status`.
+# Copy this file to .env.local and fill in the values from your Supabase project dashboard
+# (Settings -> API for the first three, Settings -> General for the ref, and the DB password
+# you set when creating the project). Never commit .env.local.
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
-# Server/test-only — never prefix this with EXPO_PUBLIC_, it must never ship in the app bundle.
+# Server/test-only — never prefix these with EXPO_PUBLIC_, they must never ship in the app bundle.
 SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_PROJECT_REF=
+SUPABASE_DB_PASSWORD=
 ```
 
-- [ ] **Step 6: Update `.gitignore`**
+- [ ] **Step 5: Update `.gitignore`**
 
 Add these lines if not already present:
 
@@ -138,18 +136,22 @@ supabase/.branches
 supabase/.temp
 ```
 
-- [ ] **Step 7: Manually verify Studio is reachable**
+- [ ] **Step 6: Verify the hosted project is reachable**
 
-Open the Studio URL printed by `supabase start` (typically `http://127.0.0.1:54323`) in a browser. Expected: the Supabase Studio dashboard loads with an empty `public` schema.
+```bash
+curl -sf -o /dev/null -w "%{http_code}\n" "$EXPO_PUBLIC_SUPABASE_URL/rest/v1/" -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY"
+```
 
-- [ ] **Step 8: Commit**
+Expected: an HTTP status code in stdout (any response, even 401/404 with a JSON body, confirms the service is reachable — don't print the response body since it may echo the key back). Do not print `$EXPO_PUBLIC_SUPABASE_ANON_KEY` or any other secret to stdout in this or any later step.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add supabase/config.toml .env.example .gitignore
-git commit -m "chore: initialize local Supabase dev environment"
+git commit -m "chore: link hosted Supabase project"
 ```
 
-Note: `supabase/migrations/` is empty at this point (nothing to commit yet) — Task 3 adds the first migration.
+Note: `supabase/migrations/` is empty at this point (nothing to commit yet) — Task 3 adds the first migration. Never `git add .env.local` — verify with `git status` that it does not appear staged before committing.
 
 ---
 
@@ -164,7 +166,7 @@ Note: `supabase/migrations/` is empty at this point (nothing to commit yet) — 
 - Modify: `package.json` (add `test` script)
 
 **Interfaces:**
-- Consumes: local Supabase instance from Task 2 (`.env.local`)
+- Consumes: hosted Supabase project linked in Task 2 (`.env.local`)
 - Produces:
   - Tables `exercises`, `routines`, `routine_days`, `routine_exercises`
   - `createAdminClient(): SupabaseClient` (in `tests/helpers/supabaseAdmin.ts`)
@@ -216,7 +218,7 @@ export function createAdminClient(): SupabaseClient {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
     throw new Error(
-      'Missing EXPO_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Copy .env.example to .env.local and fill it in from `npx supabase status`.'
+      'Missing EXPO_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Copy .env.example to .env.local and fill it in from your Supabase project dashboard (Settings -> API).'
     );
   }
   return createClient(url, serviceKey, { auth: { persistSession: false } });
@@ -415,10 +417,10 @@ create table public.routine_exercises (
 - [ ] **Step 7: Apply the migration**
 
 ```bash
-npx supabase db reset
+npx supabase db push
 ```
 
-This wipes the local DB and reapplies every migration from scratch — the right way to confirm migrations work from zero.
+This pushes any pending migrations in `supabase/migrations/` to the linked hosted project (there's only this one so far). Unlike a local `db reset`, this doesn't wipe the database first — it applies forward only, so migrations must stay strictly additive across tasks (they already are, by plan design).
 
 - [ ] **Step 8: Run the test to verify it passes**
 
@@ -597,8 +599,10 @@ create table public.routine_history (
 - [ ] **Step 4: Apply the migration**
 
 ```bash
-npx supabase db reset
+npx supabase db push
 ```
+
+This pushes the pending migration to the linked hosted project (forward-only, doesn't wipe existing data from Task 3).
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -824,8 +828,10 @@ create policy "routine_history_owner_all" on public.routine_history
 - [ ] **Step 4: Apply the migration**
 
 ```bash
-npx supabase db reset
+npx supabase db push
 ```
+
+This pushes the RLS migration to the linked hosted project (forward-only, doesn't wipe existing data from Tasks 3-4).
 
 - [ ] **Step 5: Run the test to verify it passes**
 
