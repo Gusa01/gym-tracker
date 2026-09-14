@@ -65,6 +65,12 @@ export async function softDeleteRoutine(supabase: SupabaseClient, routineId: str
     .eq('routine_id', routineId);
   if (daysFetchError) throw daysFetchError;
 
+  const { error: nextRoutineError } = await supabase
+    .from('routines')
+    .update({ next_routine_id: null })
+    .eq('next_routine_id', routineId);
+  if (nextRoutineError) throw nextRoutineError;
+
   const dayIds = (days ?? []).map((d: { id: string }) => d.id);
   if (dayIds.length > 0) {
     const { error: exercisesError } = await supabase
@@ -102,7 +108,9 @@ export async function activateRoutine(
   const { error: activateError } = await supabase
     .from('routines')
     .update({ is_active: true, started_at: new Date().toISOString() })
-    .eq('id', routineId);
+    .eq('id', routineId)
+    .eq('user_id', userId)
+    .eq('is_deleted', false);
   if (activateError) throw activateError;
 
   const { error: historyError } = await supabase
