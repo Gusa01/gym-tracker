@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthSession } from '../../src/hooks/useAuthSession';
 
@@ -13,6 +14,9 @@ export default function Home() {
       ) : (
         <Text>Sesión iniciada como {session?.user.email}</Text>
       )}
+      <Pressable style={styles.button} onPress={() => router.push('/(app)/routines' as any)}>
+        <Text style={styles.buttonText}>Ver rutinas</Text>
+      </Pressable>
       <Pressable style={styles.button} onPress={() => supabase.auth.signOut()}>
         <Text style={styles.buttonText}>Cerrar sesión</Text>
       </Pressable>
