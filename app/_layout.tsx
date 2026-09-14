@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useAuthSession } from '../src/hooks/useAuthSession';
+import { initDatabase } from '../src/lib/sqlite/db';
+
+initDatabase();
 
 export default function RootLayout() {
   const { session, isLoading } = useAuthSession();
