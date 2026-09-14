@@ -2,12 +2,15 @@ import { createAdminClient } from '../../helpers/supabaseAdmin';
 import { seedTestRoutine } from '../../helpers/seedTestRoutine';
 import {
   createRoutine,
+  updateRoutine,
   softDeleteRoutine,
   activateRoutine,
   createDay,
+  updateDay,
   softDeleteDay,
   moveDay,
   createRoutineExercise,
+  updateRoutineExercise,
   softDeleteRoutineExercise,
   moveRoutineExercise,
   findOrCreateExercise,
@@ -78,10 +81,11 @@ describe('routine mutations', () => {
 
     const { data: rows } = await supabase
       .from('routines')
-      .select('id, is_active')
+      .select('id, is_active, started_at')
       .in('id', [routineA.id, routineB.id]);
     expect(rows!.find((r) => r.id === routineA.id)!.is_active).toBe(false);
     expect(rows!.find((r) => r.id === routineB.id)!.is_active).toBe(true);
+    expect(rows!.find((r) => r.id === routineB.id)!.started_at).not.toBeNull();
 
     const { data: history } = await supabase
       .from('routine_history')
@@ -183,5 +187,50 @@ describe('routine mutations', () => {
     const first = await findOrCreateExercise(supabase, name, 'core');
     const second = await findOrCreateExercise(supabase, name, 'core');
     expect(second.id).toBe(first.id);
+  });
+
+  it('updateRoutine patches only the given fields', async () => {
+    const { routine } = await seedTestRoutine(supabase, userId);
+    const updated = await updateRoutine(supabase, routine.id, { suggestedDurationWeeks: 6 });
+    expect(updated.suggested_duration_weeks).toBe(6);
+    expect(updated.name).toBe(routine.name);
+
+    const { data: row } = await supabase
+      .from('routines')
+      .select('suggested_duration_weeks, name')
+      .eq('id', routine.id)
+      .single();
+    expect(row!.suggested_duration_weeks).toBe(6);
+    expect(row!.name).toBe(routine.name);
+  });
+
+  it('updateDay patches only the given fields', async () => {
+    const { day } = await seedTestRoutine(supabase, userId);
+    const updated = await updateDay(supabase, day.id, { isRestDay: true });
+    expect(updated.is_rest_day).toBe(true);
+    expect(updated.name).toBe(day.name);
+
+    const { data: row } = await supabase
+      .from('routine_days')
+      .select('is_rest_day, name')
+      .eq('id', day.id)
+      .single();
+    expect(row!.is_rest_day).toBe(true);
+    expect(row!.name).toBe(day.name);
+  });
+
+  it('updateRoutineExercise patches only the given fields', async () => {
+    const { routineExercise } = await seedTestRoutine(supabase, userId);
+    const updated = await updateRoutineExercise(supabase, routineExercise.id, { repMax: 15 });
+    expect(updated.rep_max).toBe(15);
+    expect(updated.rep_min).toBe(routineExercise.rep_min);
+
+    const { data: row } = await supabase
+      .from('routine_exercises')
+      .select('rep_max, rep_min')
+      .eq('id', routineExercise.id)
+      .single();
+    expect(row!.rep_max).toBe(15);
+    expect(row!.rep_min).toBe(routineExercise.rep_min);
   });
 });
