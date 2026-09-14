@@ -15,6 +15,13 @@ interface SessionExerciseCardProps {
 
 const RIR_OPTIONS = [0, 1, 2, 3, 4];
 
+const SET_TYPE_LABELS: Record<SetType, string> = {
+  top_set: 'Top set',
+  back_off: 'Back-off',
+  working: 'Serie de trabajo',
+  warmup: 'Entrada en calor',
+};
+
 export function SessionExerciseCard({ exercise, initialWeight, loggedSets, onLogSet }: SessionExerciseCardProps) {
   const [weight, setWeight] = useState(initialWeight !== null ? String(initialWeight) : '');
   const [reps, setReps] = useState('');
@@ -75,7 +82,7 @@ export function SessionExerciseCard({ exercise, initialWeight, loggedSets, onLog
             onPress={() => handleLog(set.setIndex, set.setType)}
           >
             <Text>
-              {done ? '✓ ' : ''}Serie {set.setIndex} ({set.setType})
+              {done ? '✓ ' : ''}Serie {set.setIndex} ({SET_TYPE_LABELS[set.setType]})
             </Text>
           </Pressable>
         );
