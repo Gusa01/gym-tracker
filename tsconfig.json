@@ -31,6 +31,7 @@
   "include": [
     "app",
     "components",
+    "src",
     "tests",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
