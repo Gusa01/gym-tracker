@@ -74,7 +74,7 @@ git commit -m "chore: scaffold Expo app with Expo Router"
 
 **Interfaces:**
 - Consumes: a hosted Supabase project (created manually by the human operator — see Step 2, not automatable) and its credentials in `.env.local`
-- Produces: a linked Supabase CLI project; `.env.local` (gitignored, never touched by an agent) holding `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` that later tasks read
+- Produces: a linked Supabase CLI project; `.env.local` (gitignored, never touched by an agent) holding `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN` that later tasks read
 
 - [ ] **Step 1: Install the Supabase CLI as a dev dependency**
 
@@ -90,7 +90,8 @@ This step involves real account credentials and must be done by a person, not de
 2. Wait for provisioning (~2 minutes).
 3. In the dashboard: **Settings → API** gives the Project URL and the `anon` `public` key. **Settings → API** also shows the `service_role` `secret` key (click reveal). The project ref is the subdomain in the Project URL (`https://<ref>.supabase.co`) and also shown in **Settings → General**.
 4. **Settings → Authentication → Sign In / Providers → Email**: turn off "Confirm email" so `supabase.auth.signUp()` returns a usable session immediately (equivalent of local dev's `enable_confirmations = false`).
-5. Create `.env.local` in the repo root **yourself, directly, with a text editor** — not via a command whose output could be logged, and not by asking an agent to write it — with:
+5. Generate a Supabase CLI personal access token at **supabase.com/dashboard/account/tokens** (this authenticates the CLI to your account — separate from the project's own API keys, and required for `supabase link` to work non-interactively instead of via a browser OAuth flow).
+6. Create `.env.local` in the repo root **yourself, directly, with a text editor** — not via a command whose output could be logged, and not by asking an agent to write it — with:
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
@@ -98,6 +99,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
 SUPABASE_SERVICE_ROLE_KEY=<service_role secret key>
 SUPABASE_PROJECT_REF=<ref>
 SUPABASE_DB_PASSWORD=<the database password you set in step 1>
+SUPABASE_ACCESS_TOKEN=<the personal access token from step 5>
 ```
 
 This keeps the real secrets out of any agent's context, any tool output, and this conversation.
@@ -108,7 +110,7 @@ This keeps the real secrets out of any agent's context, any tool output, and thi
 npx supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 ```
 
-(Reads both values from `.env.local` — make sure it's sourced/loaded into the shell environment first, e.g. `set -a; source .env.local; set +a` in bash.) Expected: "Finished supabase link."
+(Reads `SUPABASE_PROJECT_REF` and `SUPABASE_DB_PASSWORD` from the flags, and `SUPABASE_ACCESS_TOKEN` implicitly from the environment for CLI account auth — make sure `.env.local` is sourced/loaded into the shell environment first, e.g. `set -a; source .env.local; set +a` in bash. Redirect/suppress command output rather than letting it print verbatim, since some CLI error paths can echo back flag values.) Expected: "Finished supabase link."
 
 - [ ] **Step 4: Create `.env.example`**
 
@@ -116,14 +118,16 @@ Create `.env.example` at the repo root with the same keys but empty values, and 
 
 ```
 # Copy this file to .env.local and fill in the values from your Supabase project dashboard
-# (Settings -> API for the first three, Settings -> General for the ref, and the DB password
-# you set when creating the project). Never commit .env.local.
+# (Settings -> API for the first three, Settings -> General for the ref, the DB password you
+# set when creating the project, and a personal access token from
+# supabase.com/dashboard/account/tokens for SUPABASE_ACCESS_TOKEN). Never commit .env.local.
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 # Server/test-only — never prefix these with EXPO_PUBLIC_, they must never ship in the app bundle.
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_PROJECT_REF=
 SUPABASE_DB_PASSWORD=
+SUPABASE_ACCESS_TOKEN=
 ```
 
 - [ ] **Step 5: Update `.gitignore`**
