@@ -27,9 +27,7 @@
   },
   "include": [
     "app",
-    "components",
-    "constants",
-    "hooks"
+    "components"
   ],
   "exclude": [
     "node_modules"
