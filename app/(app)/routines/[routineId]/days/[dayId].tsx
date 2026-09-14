@@ -50,19 +50,20 @@ export default function DayEditor() {
   }
 
   function toMutationInput(values: ExerciseFormValues) {
+    const isTopSet = values.schemeType === 'top_set_backoff';
     return {
       role: values.role,
       schemeType: values.schemeType,
       repUnit: values.repUnit,
-      sets: values.sets ? Number(values.sets) : null,
-      repMin: values.repMin ? Number(values.repMin) : null,
-      repMax: values.repMax ? Number(values.repMax) : null,
+      sets: isTopSet ? null : values.sets ? Number(values.sets) : null,
+      repMin: isTopSet ? null : values.repMin ? Number(values.repMin) : null,
+      repMax: isTopSet ? null : values.repMax ? Number(values.repMax) : null,
       rirMin: values.rirMin ? Number(values.rirMin) : null,
       rirMax: values.rirMax ? Number(values.rirMax) : null,
-      topSetReps: values.topSetReps ? Number(values.topSetReps) : null,
-      backoffSets: values.backoffSets ? Number(values.backoffSets) : null,
-      backoffRepMin: values.backoffRepMin ? Number(values.backoffRepMin) : null,
-      backoffRepMax: values.backoffRepMax ? Number(values.backoffRepMax) : null,
+      topSetReps: isTopSet ? (values.topSetReps ? Number(values.topSetReps) : null) : null,
+      backoffSets: isTopSet ? (values.backoffSets ? Number(values.backoffSets) : null) : null,
+      backoffRepMin: isTopSet ? (values.backoffRepMin ? Number(values.backoffRepMin) : null) : null,
+      backoffRepMax: isTopSet ? (values.backoffRepMax ? Number(values.backoffRepMax) : null) : null,
     };
   }
 
