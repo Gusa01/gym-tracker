@@ -58,3 +58,15 @@ npx supabase db push
   ```
 
 - Then edit the generated file under `supabase/migrations/` and run `npx supabase db push` again.
+
+## Importing the initial routine
+
+Seed a user's starter routines ("Full Body" and "Split 5 días") from the bundled markdown source:
+
+```bash
+npx tsx scripts/import-routine.ts <your-login-email>
+```
+
+- Requires `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (see Setup above).
+- You must sign up for an account in the app first — the script looks up an existing user by email, it doesn't create one.
+- It's idempotent by routine name: running it again for a user who already has "Full Body" or "Split 5 días" prints a skip message instead of duplicating.
