@@ -7,6 +7,7 @@ import {
   RoutineExerciseRepUnit,
   RoutineExerciseWithName,
 } from '../lib/routines/types';
+import { StepperInput } from './StepperInput';
 
 export interface ExerciseFormValues {
   exerciseName: string;
@@ -221,83 +222,39 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
       {values.schemeType === 'normal' ? (
         <>
           <Text style={styles.label}>Series</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 3"
-            keyboardType="number-pad"
-            value={values.sets}
-            onChangeText={(text) => update('sets', text)}
-          />
+          <StepperInput value={values.sets} onChange={(text) => update('sets', text)} min={1} max={10} />
           <Text style={styles.label}>Reps mínimas</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 8"
-            keyboardType="number-pad"
-            value={values.repMin}
-            onChangeText={(text) => update('repMin', text)}
-          />
+          <StepperInput value={values.repMin} onChange={(text) => update('repMin', text)} min={1} max={50} />
           <Text style={styles.label}>Reps máximas</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 12"
-            keyboardType="number-pad"
-            value={values.repMax}
-            onChangeText={(text) => update('repMax', text)}
-          />
+          <StepperInput value={values.repMax} onChange={(text) => update('repMax', text)} min={1} max={50} />
         </>
       ) : (
         <>
           <Text style={styles.label}>Reps del top set</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 5"
-            keyboardType="number-pad"
-            value={values.topSetReps}
-            onChangeText={(text) => update('topSetReps', text)}
-          />
+          <StepperInput value={values.topSetReps} onChange={(text) => update('topSetReps', text)} min={1} max={20} />
           <Text style={styles.label}>Series de back-off</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 3"
-            keyboardType="number-pad"
-            value={values.backoffSets}
-            onChangeText={(text) => update('backoffSets', text)}
-          />
+          <StepperInput value={values.backoffSets} onChange={(text) => update('backoffSets', text)} min={1} max={10} />
           <Text style={styles.label}>Reps mínimas de back-off</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 8"
-            keyboardType="number-pad"
+          <StepperInput
             value={values.backoffRepMin}
-            onChangeText={(text) => update('backoffRepMin', text)}
+            onChange={(text) => update('backoffRepMin', text)}
+            min={1}
+            max={50}
           />
           <Text style={styles.label}>Reps máximas de back-off</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 12"
-            keyboardType="number-pad"
+          <StepperInput
             value={values.backoffRepMax}
-            onChangeText={(text) => update('backoffRepMax', text)}
+            onChange={(text) => update('backoffRepMax', text)}
+            min={1}
+            max={50}
           />
         </>
       )}
 
       <Text style={styles.label}>RIR mínimo (opcional)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ej: 1"
-        keyboardType="number-pad"
-        value={values.rirMin}
-        onChangeText={(text) => update('rirMin', text)}
-      />
+      <StepperInput value={values.rirMin} onChange={(text) => update('rirMin', text)} min={0} max={10} />
       <Text style={styles.label}>RIR máximo (opcional)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ej: 3"
-        keyboardType="number-pad"
-        value={values.rirMax}
-        onChangeText={(text) => update('rirMax', text)}
-      />
+      <StepperInput value={values.rirMax} onChange={(text) => update('rirMax', text)} min={0} max={10} />
 
       {error && <Text style={styles.error}>{error}</Text>}
 
