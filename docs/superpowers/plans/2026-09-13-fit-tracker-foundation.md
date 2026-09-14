@@ -754,8 +754,8 @@ create policy "routines_owner_insert" on public.routines
   for insert with check (user_id = auth.uid());
 create policy "routines_owner_update" on public.routines
   for update using (user_id = auth.uid());
-create policy "routines_owner_delete" on public.routines
-  for delete using (user_id = auth.uid());
+-- No delete policy: routines are soft-deleted via UPDATE is_deleted = true (Global Constraints).
+-- Omitting the policy makes the database itself refuse a hard DELETE, not just app convention.
 
 -- routine_days: via routines join
 create policy "routine_days_owner_select" on public.routine_days
@@ -770,10 +770,7 @@ create policy "routine_days_owner_update" on public.routine_days
   for update using (exists (
     select 1 from public.routines r where r.id = routine_days.routine_id and r.user_id = auth.uid()
   ));
-create policy "routine_days_owner_delete" on public.routine_days
-  for delete using (exists (
-    select 1 from public.routines r where r.id = routine_days.routine_id and r.user_id = auth.uid()
-  ));
+-- No delete policy: routine_days are soft-deleted via UPDATE is_deleted = true (Global Constraints).
 
 -- routine_exercises: via routine_days -> routines join
 create policy "routine_exercises_owner_select" on public.routine_exercises
@@ -791,11 +788,7 @@ create policy "routine_exercises_owner_update" on public.routine_exercises
     select 1 from public.routine_days d join public.routines r on r.id = d.routine_id
     where d.id = routine_exercises.routine_day_id and r.user_id = auth.uid()
   ));
-create policy "routine_exercises_owner_delete" on public.routine_exercises
-  for delete using (exists (
-    select 1 from public.routine_days d join public.routines r on r.id = d.routine_id
-    where d.id = routine_exercises.routine_day_id and r.user_id = auth.uid()
-  ));
+-- No delete policy: routine_exercises are soft-deleted via UPDATE is_deleted = true (Global Constraints).
 
 -- user_exercise_state: owner only
 create policy "user_exercise_state_owner_all" on public.user_exercise_state
