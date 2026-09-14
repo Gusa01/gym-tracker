@@ -2,33 +2,43 @@ import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Switch, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useRoutineDay } from '../../../../../src/hooks/useRoutineDay';
+import { useRoutine } from '../../../../../src/hooks/useRoutine';
 import { supabase } from '../../../../../src/lib/supabase';
-import { updateDay } from '../../../../../src/lib/routines/mutations';
+import { updateDay, setDayWeekdays } from '../../../../../src/lib/routines/mutations';
 import { DayExercisesSection } from '../../../../../src/components/DayExercisesSection';
+import { WeekdayPicker } from '../../../../../src/components/WeekdayPicker';
+import { Weekday } from '../../../../../src/lib/routines/types';
+
+const ALL_WEEKDAYS: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function DayEditor() {
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
   const { day, isLoading: dayLoading, error: dayError, refetch: refetchDay } = useRoutineDay(dayId);
+  const { routine, refetch: refetchRoutine } = useRoutine(day?.routine_id);
 
   const [name, setName] = useState('');
   const [isRestDay, setIsRestDay] = useState(false);
+  const [weekdays, setWeekdays] = useState<Weekday[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (day && !initialized) {
+    if (day && routine && !initialized) {
       setName(day.name);
       setIsRestDay(day.is_rest_day);
+      setWeekdays(ALL_WEEKDAYS.filter((w) => routine.weekday_schedule[w] === day.id));
       setInitialized(true);
     }
-  }, [day, initialized]);
+  }, [day, routine, initialized]);
 
   async function handleSave() {
-    if (!dayId) return;
+    if (!dayId || !day) return;
     setSaving(true);
     try {
       await updateDay(supabase, dayId, { name: name.trim(), isRestDay });
+      await setDayWeekdays(supabase, day.routine_id, dayId, isRestDay ? [] : weekdays);
       await refetchDay();
+      await refetchRoutine();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar.');
     } finally {
@@ -44,7 +54,7 @@ export default function DayEditor() {
     );
   }
 
-  if (dayLoading || !day) {
+  if (dayLoading || !day || !routine) {
     return (
       <View style={styles.container}>
         <Text>Cargando...</Text>
@@ -65,6 +75,12 @@ export default function DayEditor() {
         <Text>Día de descanso</Text>
         <Switch value={isRestDay} onValueChange={setIsRestDay} />
       </View>
+      {!isRestDay && (
+        <View>
+          <Text style={styles.label}>Días de la semana (opcional)</Text>
+          <WeekdayPicker selected={weekdays} onChange={setWeekdays} />
+        </View>
+      )}
       <Pressable style={styles.button} onPress={handleSave} disabled={saving}>
         <Text style={styles.buttonText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
       </Pressable>

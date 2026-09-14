@@ -6,7 +6,24 @@ import { useRoutine } from '../../../src/hooks/useRoutine';
 import { useRoutineDays } from '../../../src/hooks/useRoutineDays';
 import { useRoutines } from '../../../src/hooks/useRoutines';
 import { supabase } from '../../../src/lib/supabase';
-import { updateRoutine, createDay, softDeleteDay, moveDay } from '../../../src/lib/routines/mutations';
+import { updateRoutine, createDay, softDeleteDay, moveDay, setDayWeekdays } from '../../../src/lib/routines/mutations';
+import { Weekday } from '../../../src/lib/routines/types';
+import { WeekdayPicker } from '../../../src/components/WeekdayPicker';
+
+const WEEKDAY_LABELS: Record<Weekday, string> = {
+  mon: 'Lun',
+  tue: 'Mar',
+  wed: 'Mié',
+  thu: 'Jue',
+  fri: 'Vie',
+  sat: 'Sáb',
+  sun: 'Dom',
+};
+const ALL_WEEKDAYS: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+function weekdaysForDay(schedule: Record<string, unknown>, dayId: string): Weekday[] {
+  return ALL_WEEKDAYS.filter((day) => schedule[day] === dayId);
+}
 
 export default function RoutineEditor() {
   const { routineId } = useLocalSearchParams<{ routineId: string }>();
@@ -30,6 +47,7 @@ export default function RoutineEditor() {
 
   const [newDayName, setNewDayName] = useState('');
   const [newDayIsRest, setNewDayIsRest] = useState(false);
+  const [newDayWeekdays, setNewDayWeekdays] = useState<Weekday[]>([]);
   const [addingDay, setAddingDay] = useState(false);
 
   useEffect(() => {
@@ -65,11 +83,16 @@ export default function RoutineEditor() {
   async function handleAddDay() {
     if (!routineId || !newDayName.trim()) return;
     try {
-      await createDay(supabase, routineId, { name: newDayName.trim(), isRestDay: newDayIsRest });
+      const day = await createDay(supabase, routineId, { name: newDayName.trim(), isRestDay: newDayIsRest });
+      if (!newDayIsRest && newDayWeekdays.length > 0) {
+        await setDayWeekdays(supabase, routineId, day.id, newDayWeekdays);
+      }
       setNewDayName('');
       setNewDayIsRest(false);
+      setNewDayWeekdays([]);
       setAddingDay(false);
       await refetchDays();
+      await refetchRoutine();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo agregar el día.');
     }
@@ -175,6 +198,13 @@ export default function RoutineEditor() {
               {day.name}
               {day.is_rest_day ? ' (descanso)' : ''}
             </Text>
+            {weekdaysForDay(routine.weekday_schedule, day.id).length > 0 && (
+              <Text style={styles.weekdaySummary}>
+                {weekdaysForDay(routine.weekday_schedule, day.id)
+                  .map((d) => WEEKDAY_LABELS[d])
+                  .join(', ')}
+              </Text>
+            )}
           </Pressable>
           <View style={styles.dayActions}>
             <Pressable disabled={index === 0} onPress={() => handleMoveDay(day.id, 'up')}>
@@ -203,6 +233,12 @@ export default function RoutineEditor() {
             <Text>Día de descanso</Text>
             <Switch value={newDayIsRest} onValueChange={setNewDayIsRest} />
           </View>
+          {!newDayIsRest && (
+            <View>
+              <Text style={styles.label}>Días de la semana (opcional)</Text>
+              <WeekdayPicker selected={newDayWeekdays} onChange={setNewDayWeekdays} />
+            </View>
+          )}
           <Pressable style={styles.button} onPress={handleAddDay}>
             <Text style={styles.buttonText}>Agregar día</Text>
           </Pressable>
@@ -240,6 +276,7 @@ const styles = StyleSheet.create({
   },
   dayRowMain: { flex: 1 },
   dayName: { fontSize: 16, fontWeight: '600' },
+  weekdaySummary: { color: '#666', fontSize: 12 },
   dayActions: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   moveButton: { fontSize: 18, paddingHorizontal: 6 },
   deleteButton: { color: '#dc2626', fontWeight: '600' },

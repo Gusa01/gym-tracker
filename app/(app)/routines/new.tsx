@@ -4,9 +4,20 @@ import { router } from 'expo-router';
 import { useAuthSession } from '../../../src/hooks/useAuthSession';
 import { useRoutines } from '../../../src/hooks/useRoutines';
 import { supabase } from '../../../src/lib/supabase';
-import { createRoutine, createDay } from '../../../src/lib/routines/mutations';
-import { Routine, RoutineDay } from '../../../src/lib/routines/types';
+import { createRoutine, createDay, setDayWeekdays } from '../../../src/lib/routines/mutations';
+import { Routine, RoutineDay, Weekday } from '../../../src/lib/routines/types';
 import { DayExercisesSection } from '../../../src/components/DayExercisesSection';
+import { WeekdayPicker } from '../../../src/components/WeekdayPicker';
+
+const WEEKDAY_LABELS: Record<Weekday, string> = {
+  mon: 'Lun',
+  tue: 'Mar',
+  wed: 'Mié',
+  thu: 'Jue',
+  fri: 'Vie',
+  sat: 'Sáb',
+  sun: 'Dom',
+};
 
 export default function NewRoutine() {
   const { session } = useAuthSession();
@@ -22,8 +33,10 @@ export default function NewRoutine() {
 
   const [createdRoutine, setCreatedRoutine] = useState<Routine | null>(null);
   const [days, setDays] = useState<RoutineDay[]>([]);
+  const [dayWeekdays, setDayWeekdaysState] = useState<Record<string, Weekday[]>>({});
   const [newDayName, setNewDayName] = useState('');
   const [newDayIsRest, setNewDayIsRest] = useState(false);
+  const [newDayWeekdays, setNewDayWeekdays] = useState<Weekday[]>([]);
   const [addingDay, setAddingDay] = useState(false);
 
   async function handleCreateRoutine() {
@@ -57,9 +70,14 @@ export default function NewRoutine() {
         name: newDayName.trim(),
         isRestDay: newDayIsRest,
       });
+      if (!newDayIsRest && newDayWeekdays.length > 0) {
+        await setDayWeekdays(supabase, createdRoutine.id, day.id, newDayWeekdays);
+        setDayWeekdaysState((prev) => ({ ...prev, [day.id]: newDayWeekdays }));
+      }
       setDays((prev) => [...prev, day]);
       setNewDayName('');
       setNewDayIsRest(false);
+      setNewDayWeekdays([]);
       setAddingDay(false);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo agregar el día.');
@@ -83,6 +101,11 @@ export default function NewRoutine() {
               {day.name}
               {day.is_rest_day ? ' (descanso)' : ''}
             </Text>
+            {(dayWeekdays[day.id]?.length ?? 0) > 0 && (
+              <Text style={styles.weekdaySummary}>
+                {dayWeekdays[day.id].map((d) => WEEKDAY_LABELS[d]).join(', ')}
+              </Text>
+            )}
             {!day.is_rest_day && <DayExercisesSection dayId={day.id} />}
           </View>
         ))}
@@ -100,6 +123,12 @@ export default function NewRoutine() {
               <Text>Día de descanso</Text>
               <Switch value={newDayIsRest} onValueChange={setNewDayIsRest} />
             </View>
+            {!newDayIsRest && (
+              <View>
+                <Text style={styles.label}>Días de la semana (opcional)</Text>
+                <WeekdayPicker selected={newDayWeekdays} onChange={setNewDayWeekdays} />
+              </View>
+            )}
             <Pressable style={styles.button} onPress={handleAddDay}>
               <Text style={styles.buttonText}>Agregar día</Text>
             </Pressable>
@@ -184,6 +213,7 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '600' },
   dayBlock: { gap: 8, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12 },
   dayName: { fontSize: 16, fontWeight: '600' },
+  weekdaySummary: { color: '#666', fontSize: 12 },
   addDayForm: { gap: 12, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12 },
   newButton: { borderWidth: 1, borderColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center' },
   newButtonText: { color: '#111', fontWeight: '600' },

@@ -12,6 +12,8 @@ export interface Routine {
   created_at: string;
 }
 
+export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
 export interface RoutineDay {
   id: string;
   routine_id: string;

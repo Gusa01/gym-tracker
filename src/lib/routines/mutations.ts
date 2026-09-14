@@ -7,7 +7,10 @@ import {
   RoutineExerciseRole,
   RoutineExerciseSchemeType,
   RoutineExerciseRepUnit,
+  Weekday,
 } from './types';
+
+const ALL_WEEKDAYS: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export interface CreateRoutineInput {
   name: string;
@@ -219,6 +222,37 @@ export async function moveDay(
     .update({ order_index: current.order_index })
     .eq('id', swapWith.id);
   if (error2) throw error2;
+}
+
+export async function setDayWeekdays(
+  supabase: SupabaseClient,
+  routineId: string,
+  dayId: string,
+  weekdays: Weekday[]
+): Promise<Record<string, unknown>> {
+  const { data: routine, error: fetchError } = await supabase
+    .from('routines')
+    .select('weekday_schedule')
+    .eq('id', routineId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const schedule: Record<string, unknown> = { ...(routine.weekday_schedule ?? {}) };
+  for (const day of ALL_WEEKDAYS) {
+    if (schedule[day] === dayId) delete schedule[day];
+  }
+  for (const day of weekdays) {
+    schedule[day] = dayId;
+  }
+
+  const { data, error } = await supabase
+    .from('routines')
+    .update({ weekday_schedule: schedule })
+    .eq('id', routineId)
+    .select('weekday_schedule')
+    .single();
+  if (error) throw error;
+  return data.weekday_schedule;
 }
 
 export interface CreateRoutineExerciseInput {
