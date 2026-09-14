@@ -4,13 +4,13 @@ import { useDayExercises } from '../hooks/useDayExercises';
 import { useExercises } from '../hooks/useExercises';
 import { supabase } from '../lib/supabase';
 import {
-  createRoutineExercise,
   updateRoutineExercise,
   softDeleteRoutineExercise,
   moveRoutineExercise,
   findOrCreateExercise,
 } from '../lib/routines/mutations';
 import { ExerciseForm, ExerciseFormValues } from './ExerciseForm';
+import { ExercisePicker } from './ExercisePicker';
 import { RoutineExerciseWithName } from '../lib/routines/types';
 
 interface DayExercisesSectionProps {
@@ -42,15 +42,9 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
   const [addingExercise, setAddingExercise] = useState(false);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
 
-  async function handleCreateExercise(values: ExerciseFormValues) {
-    try {
-      const exercise = await findOrCreateExercise(supabase, values.exerciseName.trim(), values.muscleGroup);
-      await createRoutineExercise(supabase, dayId, { exerciseId: exercise.id, ...toMutationInput(values) });
-      setAddingExercise(false);
-      await refetch();
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo agregar el ejercicio.');
-    }
+  async function handlePickerDone() {
+    setAddingExercise(false);
+    await refetch();
   }
 
   async function handleUpdateExercise(routineExerciseId: string, values: ExerciseFormValues) {
@@ -151,10 +145,10 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
       )}
 
       {addingExercise ? (
-        <ExerciseForm exercises={catalog} onSubmit={handleCreateExercise} onCancel={() => setAddingExercise(false)} />
+        <ExercisePicker dayId={dayId} onDone={handlePickerDone} onCancel={() => setAddingExercise(false)} />
       ) : (
         <Pressable style={styles.newButton} onPress={() => setAddingExercise(true)}>
-          <Text style={styles.newButtonText}>+ Agregar ejercicio</Text>
+          <Text style={styles.newButtonText}>+ Agregar ejercicios</Text>
         </Pressable>
       )}
     </View>
