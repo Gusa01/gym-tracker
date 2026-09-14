@@ -18,6 +18,7 @@
     "sourceMap": true,
     "strict": true,
     "jsx": "react-jsx",
+    "types": ["jest", "node"],
     "paths": {
       "@/*": [
         "./*"
@@ -26,7 +27,8 @@
   },
   "include": [
     "app",
-    "components"
+    "components",
+    "tests"
   ],
   "exclude": [
     "node_modules"
