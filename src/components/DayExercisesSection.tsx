@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Modal } from 'react-native';
 import { useDayExercises } from '../hooks/useDayExercises';
 import { useExercises } from '../hooks/useExercises';
 import { supabase } from '../lib/supabase';
@@ -144,13 +144,18 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
         )
       )}
 
-      {addingExercise ? (
-        <ExercisePicker dayId={dayId} onDone={handlePickerDone} onCancel={() => setAddingExercise(false)} />
-      ) : (
-        <Pressable style={styles.newButton} onPress={() => setAddingExercise(true)}>
-          <Text style={styles.newButtonText}>+ Agregar ejercicios</Text>
-        </Pressable>
-      )}
+      <Pressable style={styles.newButton} onPress={() => setAddingExercise(true)}>
+        <Text style={styles.newButtonText}>+ Agregar ejercicios</Text>
+      </Pressable>
+
+      <Modal visible={addingExercise} transparent animationType="slide" onRequestClose={() => setAddingExercise(false)}>
+        <View style={styles.modalRoot}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setAddingExercise(false)} />
+          <View style={styles.modalSheet}>
+            <ExercisePicker dayId={dayId} onDone={handlePickerDone} onCancel={() => setAddingExercise(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -175,4 +180,13 @@ const styles = StyleSheet.create({
   deleteButton: { color: '#dc2626', fontWeight: '600' },
   newButton: { borderWidth: 1, borderColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center' },
   newButtonText: { color: '#111', fontWeight: '600' },
+  modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    maxHeight: '85%',
+  },
 });
