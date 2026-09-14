@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthSession } from '../src/hooks/useAuthSession';
 import { initDatabase } from '../src/lib/sqlite/db';
 
@@ -23,5 +24,11 @@ export default function RootLayout() {
 
   if (isLoading) return null;
 
-  return <Slot />;
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <Slot />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
 }
