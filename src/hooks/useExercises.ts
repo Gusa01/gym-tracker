@@ -6,17 +6,24 @@ import { Exercise } from '../lib/routines/types';
 export function useExercises() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     setIsLoading(true);
-    const data = await listExercises(supabase);
-    setExercises(data);
-    setIsLoading(false);
+    setError(null);
+    try {
+      const data = await listExercises(supabase);
+      setExercises(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los ejercicios.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  return { exercises, isLoading, refetch };
+  return { exercises, isLoading, error, refetch };
 }

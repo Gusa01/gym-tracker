@@ -9,7 +9,7 @@ import { activateRoutine, softDeleteRoutine } from '../../../src/lib/routines/mu
 export default function RoutinesList() {
   const { session } = useAuthSession();
   const userId = session?.user.id;
-  const { routines, isLoading, refetch } = useRoutines(userId);
+  const { routines, isLoading, error, refetch } = useRoutines(userId);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   async function handleActivate(routineId: string) {
@@ -18,6 +18,8 @@ export default function RoutinesList() {
     try {
       await activateRoutine(supabase, userId, routineId);
       await refetch();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo activar la rutina.');
     } finally {
       setBusyId(null);
     }
@@ -34,12 +36,22 @@ export default function RoutinesList() {
           try {
             await softDeleteRoutine(supabase, routineId);
             await refetch();
+          } catch (err) {
+            Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo eliminar la rutina.');
           } finally {
             setBusyId(null);
           }
         },
       },
     ]);
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
   }
 
   if (isLoading) {
@@ -95,6 +107,7 @@ export default function RoutinesList() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   empty: { textAlign: 'center', marginTop: 32, color: '#666' },
+  error: { color: '#dc2626' },
   row: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 8 },
   rowText: { marginBottom: 8 },
   rowTitle: { fontSize: 16, fontWeight: '600' },

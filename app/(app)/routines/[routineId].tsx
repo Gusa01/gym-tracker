@@ -12,8 +12,13 @@ export default function RoutineEditor() {
   const { routineId } = useLocalSearchParams<{ routineId: string }>();
   const { session } = useAuthSession();
   const userId = session?.user.id;
-  const { routine, isLoading: routineLoading, refetch: refetchRoutine } = useRoutine(routineId);
-  const { days, isLoading: daysLoading, refetch: refetchDays } = useRoutineDays(routineId);
+  const {
+    routine,
+    isLoading: routineLoading,
+    error: routineError,
+    refetch: refetchRoutine,
+  } = useRoutine(routineId);
+  const { days, isLoading: daysLoading, error: daysError, refetch: refetchDays } = useRoutineDays(routineId);
   const { routines: otherRoutines } = useRoutines(userId);
 
   const [name, setName] = useState('');
@@ -50,6 +55,8 @@ export default function RoutineEditor() {
         nextRoutineId,
       });
       await refetchRoutine();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la rutina.');
     } finally {
       setSaving(false);
     }
@@ -57,11 +64,15 @@ export default function RoutineEditor() {
 
   async function handleAddDay() {
     if (!routineId || !newDayName.trim()) return;
-    await createDay(supabase, routineId, { name: newDayName.trim(), isRestDay: newDayIsRest });
-    setNewDayName('');
-    setNewDayIsRest(false);
-    setAddingDay(false);
-    await refetchDays();
+    try {
+      await createDay(supabase, routineId, { name: newDayName.trim(), isRestDay: newDayIsRest });
+      setNewDayName('');
+      setNewDayIsRest(false);
+      setAddingDay(false);
+      await refetchDays();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo agregar el día.');
+    }
   }
 
   function handleDeleteDay(dayId: string, dayName: string) {
@@ -71,8 +82,12 @@ export default function RoutineEditor() {
         text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
-          await softDeleteDay(supabase, dayId);
-          await refetchDays();
+          try {
+            await softDeleteDay(supabase, dayId);
+            await refetchDays();
+          } catch (err) {
+            Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo eliminar el día.');
+          }
         },
       },
     ]);
@@ -80,8 +95,20 @@ export default function RoutineEditor() {
 
   async function handleMoveDay(dayId: string, direction: 'up' | 'down') {
     if (!routineId) return;
-    await moveDay(supabase, routineId, dayId, direction);
-    await refetchDays();
+    try {
+      await moveDay(supabase, routineId, dayId, direction);
+      await refetchDays();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo reordenar el día.');
+    }
+  }
+
+  if (routineError || daysError) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>{routineError || daysError}</Text>
+      </View>
+    );
   }
 
   if (routineLoading || daysLoading || !routine) {
@@ -190,6 +217,7 @@ const styles = StyleSheet.create({
   pickerLabel: { fontWeight: '600' },
   pickerRow: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 10 },
   pickerRowSelected: { borderColor: '#111', backgroundColor: '#f0f0f0' },
+  error: { color: '#dc2626' },
   button: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: '600' },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 12 },

@@ -18,8 +18,13 @@ import { RoutineExerciseWithName } from '../../../../../src/lib/routines/types';
 
 export default function DayEditor() {
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
-  const { day, isLoading: dayLoading, refetch: refetchDay } = useRoutineDay(dayId);
-  const { exercises, isLoading: exercisesLoading, refetch: refetchExercises } = useDayExercises(dayId);
+  const { day, isLoading: dayLoading, error: dayError, refetch: refetchDay } = useRoutineDay(dayId);
+  const {
+    exercises,
+    isLoading: exercisesLoading,
+    error: exercisesError,
+    refetch: refetchExercises,
+  } = useDayExercises(dayId);
   const { exercises: catalog } = useExercises();
 
   const [name, setName] = useState('');
@@ -44,6 +49,8 @@ export default function DayEditor() {
     try {
       await updateDay(supabase, dayId, { name: name.trim(), isRestDay });
       await refetchDay();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar.');
     } finally {
       setSaving(false);
     }
@@ -69,20 +76,28 @@ export default function DayEditor() {
 
   async function handleCreateExercise(values: ExerciseFormValues) {
     if (!dayId) return;
-    const exercise = await findOrCreateExercise(supabase, values.exerciseName.trim(), values.muscleGroup);
-    await createRoutineExercise(supabase, dayId, { exerciseId: exercise.id, ...toMutationInput(values) });
-    setAddingExercise(false);
-    await refetchExercises();
+    try {
+      const exercise = await findOrCreateExercise(supabase, values.exerciseName.trim(), values.muscleGroup);
+      await createRoutineExercise(supabase, dayId, { exerciseId: exercise.id, ...toMutationInput(values) });
+      setAddingExercise(false);
+      await refetchExercises();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo agregar el ejercicio.');
+    }
   }
 
   async function handleUpdateExercise(routineExerciseId: string, values: ExerciseFormValues) {
-    const exercise = await findOrCreateExercise(supabase, values.exerciseName.trim(), values.muscleGroup);
-    await updateRoutineExercise(supabase, routineExerciseId, {
-      exerciseId: exercise.id,
-      ...toMutationInput(values),
-    });
-    setEditingExerciseId(null);
-    await refetchExercises();
+    try {
+      const exercise = await findOrCreateExercise(supabase, values.exerciseName.trim(), values.muscleGroup);
+      await updateRoutineExercise(supabase, routineExerciseId, {
+        exerciseId: exercise.id,
+        ...toMutationInput(values),
+      });
+      setEditingExerciseId(null);
+      await refetchExercises();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar el ejercicio.');
+    }
   }
 
   function handleDeleteExercise(routineExerciseId: string, exerciseName: string) {
@@ -92,8 +107,12 @@ export default function DayEditor() {
         text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
-          await softDeleteRoutineExercise(supabase, routineExerciseId);
-          await refetchExercises();
+          try {
+            await softDeleteRoutineExercise(supabase, routineExerciseId);
+            await refetchExercises();
+          } catch (err) {
+            Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo eliminar el ejercicio.');
+          }
         },
       },
     ]);
@@ -101,8 +120,20 @@ export default function DayEditor() {
 
   async function handleMoveExercise(routineExerciseId: string, direction: 'up' | 'down') {
     if (!dayId) return;
-    await moveRoutineExercise(supabase, dayId, routineExerciseId, direction);
-    await refetchExercises();
+    try {
+      await moveRoutineExercise(supabase, dayId, routineExerciseId, direction);
+      await refetchExercises();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo reordenar el ejercicio.');
+    }
+  }
+
+  if (dayError || exercisesError) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>{dayError || exercisesError}</Text>
+      </View>
+    );
   }
 
   if (dayLoading || exercisesLoading || !day) {
@@ -124,7 +155,7 @@ export default function DayEditor() {
         <Text style={styles.buttonText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
       </Pressable>
 
-      {!isRestDay && (
+      {!day.is_rest_day && (
         <>
           <Text style={styles.sectionTitle}>Ejercicios</Text>
           {exercises.map((exercise: RoutineExerciseWithName, index: number) =>
@@ -184,6 +215,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  error: { color: '#dc2626' },
   button: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: '600' },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 12 },
