@@ -3,12 +3,16 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthSession } from '../../src/hooks/useAuthSession';
 
 export default function Home() {
-  const { session } = useAuthSession();
+  const { session, isLoading } = useAuthSession();
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Fit Tracker</Text>
-      <Text>Sesión iniciada como {session?.user.email}</Text>
+      {isLoading ? (
+        <Text>Cargando...</Text>
+      ) : (
+        <Text>Sesión iniciada como {session?.user.email}</Text>
+      )}
       <Pressable style={styles.button} onPress={() => supabase.auth.signOut()}>
         <Text style={styles.buttonText}>Cerrar sesión</Text>
       </Pressable>
