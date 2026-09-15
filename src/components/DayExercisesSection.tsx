@@ -12,6 +12,7 @@ import {
 import { ExerciseForm, ExerciseFormValues } from './ExerciseForm';
 import { ExercisePicker } from './ExercisePicker';
 import { RoutineExerciseWithName } from '../lib/routines/types';
+import { formatTargetScheme } from '../lib/sessions/prescribedSets';
 
 interface DayExercisesSectionProps {
   dayId: string;
@@ -122,9 +123,7 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
           <View key={exercise.id} style={styles.exerciseRow}>
             <Pressable style={styles.exerciseRowMain} onPress={() => setEditingExerciseId(exercise.id)}>
               <Text style={styles.exerciseName}>{exercise.exercise_name}</Text>
-              <Text style={styles.exerciseMeta}>
-                {exercise.role} · {exercise.scheme_type}
-              </Text>
+              <Text style={styles.exerciseMeta}>{formatTargetScheme(exercise)}</Text>
             </Pressable>
             <View style={styles.exerciseActions}>
               <Pressable disabled={index === 0} onPress={() => handleMoveExercise(exercise.id, 'up')}>
