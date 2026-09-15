@@ -1,12 +1,12 @@
 import { flushPendingWrites, PendingWrite } from '../../../src/lib/sync/flushQueue';
 
-function fakeSupabase(behavior: (table: string, payload: Record<string, unknown>) => { error: unknown } ) {
-  const calls: Array<{ table: string; payload: Record<string, unknown> }> = [];
+function fakeSupabase(behavior: (table: string, payload: Record<string, unknown>) => { error: unknown }) {
+  const calls: Array<{ table: string; payload: Record<string, unknown>; options?: { onConflict?: string } }> = [];
   const client = {
     from(table: string) {
       return {
-        upsert(payload: Record<string, unknown>) {
-          calls.push({ table, payload });
+        upsert(payload: Record<string, unknown>, options?: { onConflict?: string }) {
+          calls.push({ table, payload, options });
           return Promise.resolve(behavior(table, payload));
         },
       };
@@ -43,5 +43,25 @@ describe('flushPendingWrites', () => {
     const result = await flushPendingWrites(client as any, writes);
     expect(result.failedIds).toEqual(['w1']);
     expect(result.succeededIds).toEqual(['w2']);
+  });
+
+  it('upserts user_exercise_state on conflict (user_id, exercise_id), not the primary key', async () => {
+    const { client, calls } = fakeSupabase(() => ({ error: null }));
+    const writes: PendingWrite[] = [
+      {
+        id: 'w1',
+        entity: 'user_exercise_state',
+        payload: { user_id: 'u1', exercise_id: 'e1', current_weight: 60 },
+      },
+    ];
+    await flushPendingWrites(client as any, writes);
+    expect(calls[0].options).toEqual({ onConflict: 'user_id,exercise_id' });
+  });
+
+  it('upserts workout_sessions and logged_sets with no onConflict override (primary key default)', async () => {
+    const { client, calls } = fakeSupabase(() => ({ error: null }));
+    const writes: PendingWrite[] = [{ id: 'w1', entity: 'workout_sessions', payload: { id: 'w1' } }];
+    await flushPendingWrites(client as any, writes);
+    expect(calls[0].options).toBeUndefined();
   });
 });

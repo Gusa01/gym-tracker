@@ -35,13 +35,16 @@ export const CREATE_TABLES_SQL = `
     top_set_reps integer,
     backoff_sets integer,
     backoff_rep_min integer,
-    backoff_rep_max integer
+    backoff_rep_max integer,
+    muscle_group text
   );
 
   create table if not exists user_exercise_state_cache (
     exercise_id text primary key,
     current_weight real,
-    suggested_next_weight real
+    suggested_next_weight real,
+    consecutive_hit_count integer not null default 0,
+    consecutive_miss_count integer not null default 0
   );
 
   create table if not exists pending_writes (
@@ -52,3 +55,9 @@ export const CREATE_TABLES_SQL = `
     attempts integer not null default 0
   );
 `;
+
+export const MIGRATION_STATEMENTS = [
+  'alter table routine_exercises_cache add column muscle_group text',
+  'alter table user_exercise_state_cache add column consecutive_hit_count integer not null default 0',
+  'alter table user_exercise_state_cache add column consecutive_miss_count integer not null default 0',
+];

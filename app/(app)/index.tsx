@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthSession } from '../../src/hooks/useAuthSession';
@@ -15,12 +15,35 @@ export default function Home() {
     todayIsRestDay,
     sessionStatus,
     startOrResumeSession,
+    deloadExerciseName,
+    routineSwitchAvailable,
+    nextRoutineName,
+    dismissDeload,
+    dismissSwitch,
+    acceptDeload,
+    acceptSwitch,
   } = useHomeData();
 
   async function handleStart() {
     const sessionId = await startOrResumeSession();
     if (sessionId) {
       router.push(`/(app)/session/${sessionId}` as any);
+    }
+  }
+
+  async function handleAcceptDeload() {
+    try {
+      await acceptDeload();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el deload.');
+    }
+  }
+
+  async function handleAcceptSwitch() {
+    try {
+      await acceptSwitch();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo cambiar de rutina.');
     }
   }
 
@@ -65,6 +88,39 @@ export default function Home() {
         </View>
       )}
 
+      {deloadExerciseName && (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>
+            ¿Bajarle la intensidad a "{deloadExerciseName}"? Viene costando en las últimas sesiones.
+          </Text>
+          <View style={styles.bannerActions}>
+            <Pressable style={styles.bannerButton} onPress={handleAcceptDeload}>
+              <Text style={styles.bannerButtonText}>Aceptar</Text>
+            </Pressable>
+            <Pressable style={styles.bannerButtonSecondary} onPress={dismissDeload}>
+              <Text style={styles.bannerButtonSecondaryText}>Ignorar</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {routineSwitchAvailable && (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>
+            Ya pasaron las semanas sugeridas de esta rutina
+            {nextRoutineName ? ` — ¿cambiar a "${nextRoutineName}"?` : '.'}
+          </Text>
+          <View style={styles.bannerActions}>
+            <Pressable style={styles.bannerButton} onPress={handleAcceptSwitch}>
+              <Text style={styles.bannerButtonText}>Aceptar</Text>
+            </Pressable>
+            <Pressable style={styles.bannerButtonSecondary} onPress={dismissSwitch}>
+              <Text style={styles.bannerButtonSecondaryText}>Ignorar</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <Pressable style={styles.button} onPress={() => router.push('/(app)/routines' as any)}>
         <Text style={styles.buttonText}>Ver rutinas</Text>
       </Pressable>
@@ -85,4 +141,18 @@ const styles = StyleSheet.create({
   error: { color: '#dc2626' },
   button: { backgroundColor: '#111', borderRadius: 8, padding: 14 },
   buttonText: { color: '#fff', fontWeight: '600' },
+  banner: { width: '100%', gap: 8, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, padding: 16 },
+  bannerText: { color: '#111' },
+  bannerActions: { flexDirection: 'row', gap: 8 },
+  bannerButton: { flex: 1, backgroundColor: '#111', borderRadius: 8, padding: 10, alignItems: 'center' },
+  bannerButtonText: { color: '#fff', fontWeight: '600' },
+  bannerButtonSecondary: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  bannerButtonSecondaryText: { color: '#111', fontWeight: '600' },
 });

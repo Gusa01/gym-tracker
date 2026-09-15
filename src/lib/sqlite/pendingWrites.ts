@@ -4,7 +4,7 @@ import { PendingWrite } from '../sync/flushQueue';
 export function enqueueWrite(
   db: SQLiteDatabase,
   id: string,
-  entity: 'workout_sessions' | 'logged_sets',
+  entity: PendingWrite['entity'],
   payload: Record<string, unknown>
 ): void {
   db.runSync(
@@ -33,7 +33,7 @@ export function listPendingWrites(db: SQLiteDatabase): PendingWrite[] {
   const rows = db.getAllSync<PendingWriteRow>('select * from pending_writes order by created_at asc');
   return rows.map((row) => ({
     id: row.id,
-    entity: row.entity as 'workout_sessions' | 'logged_sets',
+    entity: row.entity as 'workout_sessions' | 'logged_sets' | 'user_exercise_state',
     payload: JSON.parse(row.payload_json),
   }));
 }
