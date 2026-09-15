@@ -74,12 +74,16 @@ export function useHomeData() {
       });
       // Only the deload half needs the network. The routine-switch half is derivable from the
       // already-cached routine, so recompute it here instead of losing the banner while offline.
-      const suggestions = await computeSuggestions(supabase, topSetExercises, resolved.routine, new Date()).catch(
-        () => ({
-          deloadExerciseName: null,
-          routineSwitchAvailable: shouldSuggestRoutineSwitch(resolved.routine, new Date()),
-        })
-      );
+      const suggestions = await computeSuggestions(
+        supabase,
+        topSetExercises,
+        resolved.routine,
+        resolved.routine.id,
+        new Date()
+      ).catch(() => ({
+        deloadExerciseName: null,
+        routineSwitchAvailable: shouldSuggestRoutineSwitch(resolved.routine, new Date()),
+      }));
       setDeloadExerciseName(suggestions.deloadExerciseName);
       setRoutineSwitchAvailable(suggestions.routineSwitchAvailable);
       setNextRoutineId(resolved.routine.next_routine_id);
