@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Switch, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Switch, ActivityIndicator } from 'react-native';
+import { NestableScrollContainer } from 'react-native-draggable-flatlist';
 import { router } from 'expo-router';
 import { useAuthSession } from '../hooks/useAuthSession';
 import { useRoutine } from '../hooks/useRoutine';
@@ -128,7 +129,7 @@ export function RoutineBuilder({ initialRoutineId }: RoutineBuilderProps) {
   const pickableRoutines = allRoutines.filter((r: Routine) => r.id !== routineId);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <NestableScrollContainer style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.label}>Nombre</Text>
       <TextInput
         style={styles.input}
@@ -191,7 +192,7 @@ export function RoutineBuilder({ initialRoutineId }: RoutineBuilderProps) {
       <Pressable style={styles.doneButton} onPress={handleDone}>
         <Text style={styles.doneButtonText}>Listo</Text>
       </Pressable>
-    </ScrollView>
+    </NestableScrollContainer>
   );
 }
 

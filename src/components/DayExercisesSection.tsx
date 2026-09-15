@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
+import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
 import { useDayExercises } from '../hooks/useDayExercises';
 import { useExercises } from '../hooks/useExercises';
 import { supabase } from '../lib/supabase';
 import {
   updateRoutineExercise,
   softDeleteRoutineExercise,
-  moveRoutineExercise,
+  reorderRoutineExercises,
   findOrCreateExercise,
 } from '../lib/routines/mutations';
 import { ExerciseForm, ExerciseFormValues } from './ExerciseForm';
@@ -80,9 +81,12 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
     ]);
   }
 
-  async function handleMoveExercise(routineExerciseId: string, direction: 'up' | 'down') {
+  async function handleReorder(data: RoutineExerciseWithName[]) {
     try {
-      await moveRoutineExercise(supabase, dayId, routineExerciseId, direction);
+      await reorderRoutineExercises(
+        supabase,
+        data.map((exercise) => exercise.id)
+      );
       await refetch();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo reordenar el ejercicio.');
@@ -110,38 +114,36 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Ejercicios</Text>
-      {exercises.map((exercise: RoutineExerciseWithName, index: number) =>
-        editingExerciseId === exercise.id ? (
-          <ExerciseForm
-            key={exercise.id}
-            exercises={catalog}
-            initial={exercise}
-            onSubmit={(values) => handleUpdateExercise(exercise.id, values)}
-            onCancel={() => setEditingExerciseId(null)}
-          />
-        ) : (
-          <View key={exercise.id} style={styles.exerciseRow}>
-            <Pressable style={styles.exerciseRowMain} onPress={() => setEditingExerciseId(exercise.id)}>
-              <Text style={styles.exerciseName}>{exercise.exercise_name}</Text>
-              <Text style={styles.exerciseMeta}>{formatTargetScheme(exercise)}</Text>
-            </Pressable>
-            <View style={styles.exerciseActions}>
-              <Pressable disabled={index === 0} onPress={() => handleMoveExercise(exercise.id, 'up')}>
-                <Text style={styles.moveButton}>↑</Text>
+      <NestableDraggableFlatList
+        data={exercises}
+        keyExtractor={(exercise: RoutineExerciseWithName) => exercise.id}
+        onDragEnd={({ data }) => handleReorder(data)}
+        renderItem={({ item: exercise, drag, isActive }: RenderItemParams<RoutineExerciseWithName>) =>
+          editingExerciseId === exercise.id ? (
+            <ExerciseForm
+              exercises={catalog}
+              initial={exercise}
+              onSubmit={(values) => handleUpdateExercise(exercise.id, values)}
+              onCancel={() => setEditingExerciseId(null)}
+            />
+          ) : (
+            <View style={[styles.exerciseRow, isActive && styles.exerciseRowActive]}>
+              <Pressable style={styles.exerciseRowMain} onPress={() => setEditingExerciseId(exercise.id)}>
+                <Text style={styles.exerciseName}>{exercise.exercise_name}</Text>
+                <Text style={styles.exerciseMeta}>{formatTargetScheme(exercise)}</Text>
               </Pressable>
-              <Pressable
-                disabled={index === exercises.length - 1}
-                onPress={() => handleMoveExercise(exercise.id, 'down')}
-              >
-                <Text style={styles.moveButton}>↓</Text>
-              </Pressable>
-              <Pressable onPress={() => handleDeleteExercise(exercise.id, exercise.exercise_name)}>
-                <Text style={styles.deleteButton}>Eliminar</Text>
-              </Pressable>
+              <View style={styles.exerciseActions}>
+                <Pressable onLongPress={drag} disabled={isActive}>
+                  <Text style={styles.dragHandle}>☰</Text>
+                </Pressable>
+                <Pressable onPress={() => handleDeleteExercise(exercise.id, exercise.exercise_name)}>
+                  <Text style={styles.deleteButton}>Eliminar</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        )
-      )}
+          )
+        }
+      />
 
       <Pressable style={styles.newButton} onPress={() => setAddingExercise(true)}>
         <Text style={styles.newButtonText}>+ Agregar ejercicios</Text>
@@ -170,12 +172,14 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
+    marginBottom: 8,
   },
+  exerciseRowActive: { borderColor: '#111', backgroundColor: '#f5f5f5' },
   exerciseRowMain: { flex: 1 },
   exerciseName: { fontSize: 16, fontWeight: '600' },
   exerciseMeta: { color: '#666', fontSize: 12 },
   exerciseActions: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  moveButton: { fontSize: 18, paddingHorizontal: 6 },
+  dragHandle: { fontSize: 20, paddingHorizontal: 6, color: '#666' },
   deleteButton: { color: '#dc2626', fontWeight: '600' },
   newButton: { borderWidth: 1, borderColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center' },
   newButtonText: { color: '#111', fontWeight: '600' },

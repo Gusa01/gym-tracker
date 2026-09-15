@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthSession } from '../src/hooks/useAuthSession';
 import { initDatabase, getDatabase } from '../src/lib/sqlite/db';
 import { supabase } from '../src/lib/supabase';
@@ -34,10 +35,12 @@ export default function RootLayout() {
   if (isLoading) return null;
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <Slot />
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+          <Slot />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

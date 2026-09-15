@@ -352,39 +352,17 @@ export async function softDeleteRoutineExercise(
   if (error) throw error;
 }
 
-export async function moveRoutineExercise(
+export async function reorderRoutineExercises(
   supabase: SupabaseClient,
-  dayId: string,
-  routineExerciseId: string,
-  direction: 'up' | 'down'
+  orderedIds: string[]
 ): Promise<void> {
-  const { data, error } = await supabase
-    .from('routine_exercises')
-    .select('id, order_index')
-    .eq('routine_day_id', dayId)
-    .eq('is_deleted', false)
-    .order('order_index');
-  if (error) throw error;
-  const items = data ?? [];
-
-  const index = items.findIndex((e: { id: string }) => e.id === routineExerciseId);
-  const swapWithIndex = direction === 'up' ? index - 1 : index + 1;
-  if (index === -1 || swapWithIndex < 0 || swapWithIndex >= items.length) return;
-
-  const current = items[index];
-  const swapWith = items[swapWithIndex];
-
-  const { error: error1 } = await supabase
-    .from('routine_exercises')
-    .update({ order_index: swapWith.order_index })
-    .eq('id', current.id);
-  if (error1) throw error1;
-
-  const { error: error2 } = await supabase
-    .from('routine_exercises')
-    .update({ order_index: current.order_index })
-    .eq('id', swapWith.id);
-  if (error2) throw error2;
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from('routine_exercises')
+      .update({ order_index: i })
+      .eq('id', orderedIds[i]);
+    if (error) throw error;
+  }
 }
 
 export async function findOrCreateExercise(
