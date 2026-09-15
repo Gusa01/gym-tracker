@@ -11,6 +11,7 @@ import { saveCurrentSession, loadCurrentSession } from '../lib/sessions/currentS
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
 import { flushOnly, syncNow } from '../lib/sync/syncService';
 import { computeSuggestions } from '../lib/progression/suggestions';
+import { shouldSuggestRoutineSwitch } from '../lib/progression/routineSwitch';
 import { recordDeload } from '../lib/progression/mutations';
 import { activateRoutine } from '../lib/routines/mutations';
 import { getRoutine } from '../lib/routines/queries';
@@ -71,8 +72,13 @@ export function useHomeData() {
         seenExerciseIds.add(exercise.id);
         return true;
       });
+      // Only the deload half needs the network. The routine-switch half is derivable from the
+      // already-cached routine, so recompute it here instead of losing the banner while offline.
       const suggestions = await computeSuggestions(supabase, topSetExercises, resolved.routine, new Date()).catch(
-        () => ({ deloadExerciseName: null, routineSwitchAvailable: false })
+        () => ({
+          deloadExerciseName: null,
+          routineSwitchAvailable: shouldSuggestRoutineSwitch(resolved.routine, new Date()),
+        })
       );
       setDeloadExerciseName(suggestions.deloadExerciseName);
       setRoutineSwitchAvailable(suggestions.routineSwitchAvailable);
