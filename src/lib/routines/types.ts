@@ -55,5 +55,5 @@ export interface RoutineExercise {
 
 export interface RoutineExerciseWithName extends RoutineExercise {
   exercise_name: string;
-  muscle_group?: string;
+  muscle_group?: string | null;
 }

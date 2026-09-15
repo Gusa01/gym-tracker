@@ -94,9 +94,11 @@ describe('listRecentTopSets', () => {
   });
 });
 
+const NO_SUCH_ROUTINE_ID = '00000000-0000-0000-0000-000000000000';
+
 describe('computeSuggestions', () => {
   it('suggests a deload when the top set missed in the last two completed sessions', async () => {
-    const { day } = await seedActiveRoutine(supabase, userId);
+    const { day, routine } = await seedActiveRoutine(supabase, userId);
     const exercise = await seedTopSetExercise(day.id);
     await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-04-01', 3, 0);
     await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-04-08', 4, 0);
@@ -105,13 +107,14 @@ describe('computeSuggestions', () => {
       supabase,
       [exercise],
       { started_at: null, suggested_duration_weeks: null, next_routine_id: null },
+      routine.id,
       new Date()
     );
     expect(result.deloadExerciseName).toBe(exercise.exercise_name);
   });
 
   it('does not suggest a deload when only one of the last two sessions missed', async () => {
-    const { day } = await seedActiveRoutine(supabase, userId);
+    const { day, routine } = await seedActiveRoutine(supabase, userId);
     const exercise = await seedTopSetExercise(day.id);
     await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-05-01', 5, 2);
     await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-05-08', 3, 0);
@@ -120,9 +123,48 @@ describe('computeSuggestions', () => {
       supabase,
       [exercise],
       { started_at: null, suggested_duration_weeks: null, next_routine_id: null },
+      routine.id,
       new Date()
     );
     expect(result.deloadExerciseName).toBeNull();
+  });
+
+  it('suppresses a deload suggestion once already accepted for that pair of sessions, but resurfaces after a new deficient session', async () => {
+    const { day, routine } = await seedActiveRoutine(supabase, userId);
+    const exercise = await seedTopSetExercise(day.id);
+    await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-06-01', 3, 0);
+    await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-06-08', 4, 0);
+
+    const beforeAccept = await computeSuggestions(
+      supabase,
+      [exercise],
+      { started_at: null, suggested_duration_weeks: null, next_routine_id: null },
+      routine.id,
+      new Date()
+    );
+    expect(beforeAccept.deloadExerciseName).toBe(exercise.exercise_name);
+
+    await recordDeload(supabase, userId, routine.id);
+
+    const afterAccept = await computeSuggestions(
+      supabase,
+      [exercise],
+      { started_at: null, suggested_duration_weeks: null, next_routine_id: null },
+      routine.id,
+      new Date()
+    );
+    expect(afterAccept.deloadExerciseName).toBeNull();
+
+    await seedCompletedSessionWithTopSet(day.id, exercise.id, '2026-06-15', 3, 0);
+
+    const afterNewSession = await computeSuggestions(
+      supabase,
+      [exercise],
+      { started_at: null, suggested_duration_weeks: null, next_routine_id: null },
+      routine.id,
+      new Date()
+    );
+    expect(afterNewSession.deloadExerciseName).toBe(exercise.exercise_name);
   });
 
   it('suggests a routine switch once the suggested duration is exceeded', async () => {
@@ -131,7 +173,7 @@ describe('computeSuggestions', () => {
       suggested_duration_weeks: 4,
       next_routine_id: 'next-routine-id',
     };
-    const result = await computeSuggestions(supabase, [], routine, new Date(2026, 0, 29, 12));
+    const result = await computeSuggestions(supabase, [], routine, NO_SUCH_ROUTINE_ID, new Date(2026, 0, 29, 12));
     expect(result.routineSwitchAvailable).toBe(true);
   });
 
@@ -141,7 +183,7 @@ describe('computeSuggestions', () => {
       suggested_duration_weeks: 4,
       next_routine_id: null,
     };
-    const result = await computeSuggestions(supabase, [], routine, new Date(2026, 0, 29, 12));
+    const result = await computeSuggestions(supabase, [], routine, NO_SUCH_ROUTINE_ID, new Date(2026, 0, 29, 12));
     expect(result.routineSwitchAvailable).toBe(false);
   });
 });

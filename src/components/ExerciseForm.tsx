@@ -76,6 +76,8 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
   const [saving, setSaving] = useState(false);
   const [browseFilter, setBrowseFilter] = useState<'upper' | 'lower' | 'core' | null>(null);
 
+  const unitLabel = values.repUnit === 'seconds' ? 'Segundos' : 'Reps';
+
   const typedName = values.exerciseName.trim().toLowerCase();
   const suggestions =
     typedName.length > 0 || browseFilter
@@ -223,25 +225,25 @@ export function ExerciseForm({ exercises, initial, onSubmit, onCancel }: Exercis
         <>
           <Text style={styles.label}>Series</Text>
           <StepperInput value={values.sets} onChange={(text) => update('sets', text)} min={1} max={10} />
-          <Text style={styles.label}>Reps mínimas</Text>
+          <Text style={styles.label}>{unitLabel} mínimas</Text>
           <StepperInput value={values.repMin} onChange={(text) => update('repMin', text)} min={1} max={50} />
-          <Text style={styles.label}>Reps máximas</Text>
+          <Text style={styles.label}>{unitLabel} máximas</Text>
           <StepperInput value={values.repMax} onChange={(text) => update('repMax', text)} min={1} max={50} />
         </>
       ) : (
         <>
-          <Text style={styles.label}>Reps del top set</Text>
+          <Text style={styles.label}>{unitLabel} del top set</Text>
           <StepperInput value={values.topSetReps} onChange={(text) => update('topSetReps', text)} min={1} max={20} />
           <Text style={styles.label}>Series de back-off</Text>
           <StepperInput value={values.backoffSets} onChange={(text) => update('backoffSets', text)} min={1} max={10} />
-          <Text style={styles.label}>Reps mínimas de back-off</Text>
+          <Text style={styles.label}>{unitLabel} mínimas de back-off</Text>
           <StepperInput
             value={values.backoffRepMin}
             onChange={(text) => update('backoffRepMin', text)}
             min={1}
             max={50}
           />
-          <Text style={styles.label}>Reps máximas de back-off</Text>
+          <Text style={styles.label}>{unitLabel} máximas de back-off</Text>
           <StepperInput
             value={values.backoffRepMax}
             onChange={(text) => update('backoffRepMax', text)}

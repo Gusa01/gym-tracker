@@ -1,4 +1,6 @@
 import { flushPendingWrites, PendingWrite } from '../../../src/lib/sync/flushQueue';
+import { createAdminClient } from '../../helpers/supabaseAdmin';
+import { seedTestRoutine } from '../../helpers/seedTestRoutine';
 
 function fakeSupabase(behavior: (table: string, payload: Record<string, unknown>) => { error: unknown }) {
   const calls: Array<{ table: string; payload: Record<string, unknown>; options?: { onConflict?: string } }> = [];
@@ -63,5 +65,69 @@ describe('flushPendingWrites', () => {
     const writes: PendingWrite[] = [{ id: 'w1', entity: 'workout_sessions', payload: { id: 'w1' } }];
     await flushPendingWrites(client as any, writes);
     expect(calls[0].options).toBeUndefined();
+  });
+});
+
+describe('flushPendingWrites against the real hosted project', () => {
+  const supabase = createAdminClient();
+  const testEmail = `flush-queue-${Date.now()}@example.com`;
+  let userId: string;
+
+  beforeAll(async () => {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: testEmail,
+      password: 'testpassword123',
+      email_confirm: true,
+    });
+    if (error) throw error;
+    userId = data.user.id;
+  });
+
+  afterAll(async () => {
+    await supabase.auth.admin.deleteUser(userId);
+  });
+
+  it('upserting a second user_exercise_state write for the same (user_id, exercise_id) updates the existing row instead of creating a duplicate', async () => {
+    const { exercise } = await seedTestRoutine(supabase, userId);
+
+    const firstWrite: PendingWrite = {
+      id: 'first',
+      entity: 'user_exercise_state',
+      payload: {
+        user_id: userId,
+        exercise_id: exercise.id,
+        current_weight: 60,
+        suggested_next_weight: 62.5,
+        consecutive_hit_count: 1,
+        consecutive_miss_count: 0,
+      },
+    };
+    const firstResult = await flushPendingWrites(supabase, [firstWrite]);
+    expect(firstResult).toEqual({ succeededIds: ['first'], failedIds: [] });
+
+    const secondWrite: PendingWrite = {
+      id: 'second',
+      entity: 'user_exercise_state',
+      payload: {
+        user_id: userId,
+        exercise_id: exercise.id,
+        current_weight: 62.5,
+        suggested_next_weight: 65,
+        consecutive_hit_count: 2,
+        consecutive_miss_count: 0,
+      },
+    };
+    const secondResult = await flushPendingWrites(supabase, [secondWrite]);
+    expect(secondResult).toEqual({ succeededIds: ['second'], failedIds: [] });
+
+    const { data: rows, error } = await supabase
+      .from('user_exercise_state')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('exercise_id', exercise.id);
+    if (error) throw error;
+    expect(rows).toHaveLength(1);
+    expect(rows![0].current_weight).toBe(62.5);
+    expect(rows![0].consecutive_hit_count).toBe(2);
   });
 });

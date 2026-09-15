@@ -12,7 +12,7 @@ import {
   createRoutineExercise,
   updateRoutineExercise,
   softDeleteRoutineExercise,
-  moveRoutineExercise,
+  reorderRoutineExercises,
   findOrCreateExercise,
 } from '../../../src/lib/routines/mutations';
 
@@ -136,10 +136,9 @@ describe('routine mutations', () => {
     expect(exerciseRow!.is_deleted).toBe(true);
   });
 
-  it('reorders and soft-deletes exercises within a day', async () => {
+  it('soft-deletes an exercise within a day', async () => {
     const { day } = await seedTestRoutine(supabase, userId);
-    const exerciseOne = await findOrCreateExercise(supabase, `Reorder Exercise A ${Date.now()}`, 'upper');
-    const exerciseTwo = await findOrCreateExercise(supabase, `Reorder Exercise B ${Date.now()}`, 'upper');
+    const exerciseOne = await findOrCreateExercise(supabase, `Delete Exercise A ${Date.now()}`, 'upper');
     const input = {
       role: 'accessory' as const,
       schemeType: 'normal' as const,
@@ -159,19 +158,6 @@ describe('routine mutations', () => {
       ...input,
       exerciseId: exerciseOne.id,
     });
-    const routineExerciseTwo = await createRoutineExercise(supabase, day.id, {
-      ...input,
-      exerciseId: exerciseTwo.id,
-    });
-
-    await moveRoutineExercise(supabase, day.id, routineExerciseTwo.id, 'up');
-    const { data: reordered } = await supabase
-      .from('routine_exercises')
-      .select('id')
-      .in('id', [routineExerciseOne.id, routineExerciseTwo.id])
-      .order('order_index');
-    expect(reordered![0].id).toBe(routineExerciseTwo.id);
-    expect(reordered![1].id).toBe(routineExerciseOne.id);
 
     await softDeleteRoutineExercise(supabase, routineExerciseOne.id);
     const { data: deletedRow } = await supabase
@@ -180,6 +166,52 @@ describe('routine mutations', () => {
       .eq('id', routineExerciseOne.id)
       .single();
     expect(deletedRow!.is_deleted).toBe(true);
+  });
+
+  it('reorderRoutineExercises applies an arbitrary new order in one call', async () => {
+    const { day } = await seedTestRoutine(supabase, userId);
+    const exerciseOne = await findOrCreateExercise(supabase, `Drag Exercise A ${Date.now()}`, 'upper');
+    const exerciseTwo = await findOrCreateExercise(supabase, `Drag Exercise B ${Date.now()}`, 'upper');
+    const exerciseThree = await findOrCreateExercise(supabase, `Drag Exercise C ${Date.now()}`, 'upper');
+    const input = {
+      role: 'accessory' as const,
+      schemeType: 'normal' as const,
+      repUnit: 'reps' as const,
+      sets: 2,
+      repMin: 10,
+      repMax: 12,
+      rirMin: 2,
+      rirMax: 3,
+      topSetReps: null,
+      backoffSets: null,
+      backoffRepMin: null,
+      backoffRepMax: null,
+    };
+
+    const routineExerciseOne = await createRoutineExercise(supabase, day.id, { ...input, exerciseId: exerciseOne.id });
+    const routineExerciseTwo = await createRoutineExercise(supabase, day.id, { ...input, exerciseId: exerciseTwo.id });
+    const routineExerciseThree = await createRoutineExercise(supabase, day.id, {
+      ...input,
+      exerciseId: exerciseThree.id,
+    });
+
+    // Move the last one to the front — not reachable via a single adjacent swap.
+    await reorderRoutineExercises(supabase, [
+      routineExerciseThree.id,
+      routineExerciseOne.id,
+      routineExerciseTwo.id,
+    ]);
+
+    const { data: reordered } = await supabase
+      .from('routine_exercises')
+      .select('id')
+      .in('id', [routineExerciseOne.id, routineExerciseTwo.id, routineExerciseThree.id])
+      .order('order_index');
+    expect(reordered!.map((r) => r.id)).toEqual([
+      routineExerciseThree.id,
+      routineExerciseOne.id,
+      routineExerciseTwo.id,
+    ]);
   });
 
   it('findOrCreateExercise deduplicates by name', async () => {

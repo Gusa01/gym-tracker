@@ -1,6 +1,19 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { LoggedSet } from '../sessions/types';
 
+export async function getLatestDeloadEvent(supabase: SupabaseClient, routineId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('routine_history')
+    .select('occurred_at')
+    .eq('routine_id', routineId)
+    .eq('event_type', 'deload')
+    .order('occurred_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.occurred_at ?? null;
+}
+
 export async function listRecentTopSets(
   supabase: SupabaseClient,
   routineExerciseId: string,

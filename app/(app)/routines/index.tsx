@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthSession } from '../../../src/hooks/useAuthSession';
 import { useRoutines } from '../../../src/hooks/useRoutines';
@@ -57,7 +57,7 @@ export default function RoutinesList() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <Text>Cargando...</Text>
+        <ActivityIndicator />
       </View>
     );
   }
