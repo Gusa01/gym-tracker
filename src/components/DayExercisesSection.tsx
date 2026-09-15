@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useDayExercises } from '../hooks/useDayExercises';
 import { useExercises } from '../hooks/useExercises';
 import { supabase } from '../lib/supabase';
@@ -102,7 +102,7 @@ export function DayExercisesSection({ dayId }: DayExercisesSectionProps) {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Ejercicios</Text>
-        <Text>Cargando...</Text>
+        <ActivityIndicator />
       </View>
     );
   }

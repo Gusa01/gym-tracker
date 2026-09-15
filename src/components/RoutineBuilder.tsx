@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Switch, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Switch, ScrollView, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthSession } from '../hooks/useAuthSession';
 import { useRoutine } from '../hooks/useRoutine';
@@ -119,7 +119,7 @@ export function RoutineBuilder({ initialRoutineId }: RoutineBuilderProps) {
   if (initialRoutineId && (routineLoading || !routine)) {
     return (
       <View style={styles.container}>
-        <Text>Cargando...</Text>
+        <ActivityIndicator />
       </View>
     );
   }

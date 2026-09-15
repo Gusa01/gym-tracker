@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthSession } from '../../src/hooks/useAuthSession';
@@ -52,7 +52,7 @@ export default function Home() {
       <Text style={styles.title}>Fit Tracker</Text>
       <Text>Sesión iniciada como {session?.user.email}</Text>
 
-      {loading && <Text>Cargando...</Text>}
+      {loading && <ActivityIndicator />}
       {error && <Text style={styles.error}>{error}</Text>}
 
       {!loading && !error && (

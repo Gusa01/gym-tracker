@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getDatabase } from '../../../src/lib/sqlite/db';
 import { resolveToday } from '../../../src/lib/sqlite/cache';
@@ -27,7 +27,7 @@ export default function SessionScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text>Cargando...</Text>
+        <ActivityIndicator />
       </View>
     );
   }
