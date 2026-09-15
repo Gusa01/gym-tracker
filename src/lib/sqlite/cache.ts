@@ -30,6 +30,8 @@ export interface CachedUserExerciseState {
   exercise_id: string;
   current_weight: number | null;
   suggested_next_weight: number | null;
+  consecutive_hit_count: number;
+  consecutive_miss_count: number;
 }
 
 export async function refreshLocalCache(
@@ -42,7 +44,7 @@ export async function refreshLocalCache(
   const exercisesByDay = await Promise.all(days.map((day) => listDayExercises(supabase, day.id)));
   const { data: states, error: statesError } = await supabase
     .from('user_exercise_state')
-    .select('exercise_id, current_weight, suggested_next_weight')
+    .select('exercise_id, current_weight, suggested_next_weight, consecutive_hit_count, consecutive_miss_count')
     .eq('user_id', userId);
   if (statesError) throw statesError;
 
@@ -81,8 +83,9 @@ export async function refreshLocalCache(
       db.runSync(
         `insert into routine_exercises_cache
            (id, routine_day_id, exercise_id, exercise_name, order_index, role, scheme_type, rep_unit,
-            sets, rep_min, rep_max, rir_min, rir_max, top_set_reps, backoff_sets, backoff_rep_min, backoff_rep_max)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sets, rep_min, rep_max, rir_min, rir_max, top_set_reps, backoff_sets, backoff_rep_min, backoff_rep_max,
+            muscle_group)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           exercise.id,
           exercise.routine_day_id,
@@ -101,14 +104,23 @@ export async function refreshLocalCache(
           exercise.backoff_sets,
           exercise.backoff_rep_min,
           exercise.backoff_rep_max,
+          exercise.muscle_group ?? null,
         ]
       );
     });
 
     (states ?? []).forEach((state) => {
       db.runSync(
-        'insert into user_exercise_state_cache (exercise_id, current_weight, suggested_next_weight) values (?, ?, ?)',
-        [state.exercise_id, state.current_weight, state.suggested_next_weight]
+        `insert into user_exercise_state_cache
+           (exercise_id, current_weight, suggested_next_weight, consecutive_hit_count, consecutive_miss_count)
+         values (?, ?, ?, ?, ?)`,
+        [
+          state.exercise_id,
+          state.current_weight,
+          state.suggested_next_weight,
+          state.consecutive_hit_count,
+          state.consecutive_miss_count,
+        ]
       );
     });
   });

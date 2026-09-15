@@ -2,7 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface PendingWrite {
   id: string;
-  entity: 'workout_sessions' | 'logged_sets';
+  entity: 'workout_sessions' | 'logged_sets' | 'user_exercise_state';
   payload: Record<string, unknown>;
 }
 
@@ -11,11 +11,16 @@ export interface FlushResult {
   failedIds: string[];
 }
 
+const CONFLICT_TARGETS: Partial<Record<PendingWrite['entity'], string>> = {
+  user_exercise_state: 'user_id,exercise_id',
+};
+
 export async function flushPendingWrites(supabase: SupabaseClient, writes: PendingWrite[]): Promise<FlushResult> {
   const succeededIds: string[] = [];
   const failedIds: string[] = [];
   for (const write of writes) {
-    const { error } = await supabase.from(write.entity).upsert(write.payload);
+    const onConflict = CONFLICT_TARGETS[write.entity];
+    const { error } = await supabase.from(write.entity).upsert(write.payload, onConflict ? { onConflict } : undefined);
     if (error) {
       failedIds.push(write.id);
     } else {
