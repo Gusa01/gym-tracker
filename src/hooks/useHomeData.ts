@@ -4,12 +4,16 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from '../lib/supabase';
 import { useAuthSession } from './useAuthSession';
 import { getDatabase } from '../lib/sqlite/db';
-import { resolveToday } from '../lib/sqlite/cache';
+import { resolveToday, getCachedRoutineDays, getCachedDayExercises } from '../lib/sqlite/cache';
 import { formatDateOnly } from '../lib/sessions/weekResolution';
 import { getSessionForDate } from '../lib/sessions/queries';
 import { saveCurrentSession, loadCurrentSession } from '../lib/sessions/currentSessionStorage';
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
 import { flushOnly, syncNow } from '../lib/sync/syncService';
+import { computeSuggestions } from '../lib/progression/suggestions';
+import { recordDeload } from '../lib/progression/mutations';
+import { activateRoutine } from '../lib/routines/mutations';
+import { getRoutine } from '../lib/routines/queries';
 
 type SessionStatus = 'none' | 'in_progress' | 'completed';
 
@@ -25,6 +29,12 @@ export function useHomeData() {
   const [todayDayName, setTodayDayName] = useState<string | null>(null);
   const [todayIsRestDay, setTodayIsRestDay] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('none');
+  const [deloadExerciseName, setDeloadExerciseName] = useState<string | null>(null);
+  const [deloadDismissed, setDeloadDismissed] = useState(false);
+  const [routineSwitchAvailable, setRoutineSwitchAvailable] = useState(false);
+  const [nextRoutineId, setNextRoutineId] = useState<string | null>(null);
+  const [nextRoutineName, setNextRoutineName] = useState<string | null>(null);
+  const [switchDismissed, setSwitchDismissed] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -43,10 +53,36 @@ export function useHomeData() {
         setTodayDayName(null);
         setTodayIsRestDay(false);
         setSessionStatus('none');
+        setDeloadExerciseName(null);
+        setRoutineSwitchAvailable(false);
+        setNextRoutineName(null);
         return;
       }
       setRoutineName(resolved.routine.name);
       setWeekNumber(resolved.weekNumber);
+
+      setDeloadDismissed(false);
+      setSwitchDismissed(false);
+      const days = getCachedRoutineDays(getDatabase(), resolved.routine.id);
+      const exercisesByDay = days.map((d) => getCachedDayExercises(getDatabase(), d.id));
+      const seenExerciseIds = new Set<string>();
+      const topSetExercises = exercisesByDay.flat().filter((exercise) => {
+        if (exercise.scheme_type !== 'top_set_backoff' || seenExerciseIds.has(exercise.id)) return false;
+        seenExerciseIds.add(exercise.id);
+        return true;
+      });
+      const suggestions = await computeSuggestions(supabase, topSetExercises, resolved.routine, new Date()).catch(
+        () => ({ deloadExerciseName: null, routineSwitchAvailable: false })
+      );
+      setDeloadExerciseName(suggestions.deloadExerciseName);
+      setRoutineSwitchAvailable(suggestions.routineSwitchAvailable);
+      setNextRoutineId(resolved.routine.next_routine_id);
+      if (suggestions.routineSwitchAvailable && resolved.routine.next_routine_id) {
+        const nextRoutine = await getRoutine(supabase, resolved.routine.next_routine_id).catch(() => null);
+        setNextRoutineName(nextRoutine?.name ?? null);
+      } else {
+        setNextRoutineName(null);
+      }
 
       const day = resolved.day;
       if (!day) {
@@ -130,6 +166,28 @@ export function useHomeData() {
     }
   }, [userId, todayDayId, weekNumber]);
 
+  function dismissDeload() {
+    setDeloadDismissed(true);
+  }
+
+  function dismissSwitch() {
+    setSwitchDismissed(true);
+  }
+
+  async function acceptDeload() {
+    const resolved = resolveToday(getDatabase());
+    if (!userId || !resolved) return;
+    await recordDeload(supabase, userId, resolved.routine.id);
+    setDeloadDismissed(true);
+  }
+
+  async function acceptSwitch() {
+    if (!userId || !nextRoutineId) return;
+    await activateRoutine(supabase, userId, nextRoutineId);
+    setSwitchDismissed(true);
+    await load();
+  }
+
   return {
     loading,
     error,
@@ -139,5 +197,12 @@ export function useHomeData() {
     todayIsRestDay,
     sessionStatus,
     startOrResumeSession,
+    deloadExerciseName: deloadDismissed ? null : deloadExerciseName,
+    routineSwitchAvailable: switchDismissed ? false : routineSwitchAvailable,
+    nextRoutineName,
+    dismissDeload,
+    dismissSwitch,
+    acceptDeload,
+    acceptSwitch,
   };
 }
