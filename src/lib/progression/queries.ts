@@ -1,11 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { LoggedSet } from '../sessions/types';
 
-// Re-exported so callers (and the Task 4 test suite) can import both query and
-// mutation functions from a single module path; the canonical implementation
-// lives in ./mutations.ts per the task brief's file structure.
-export { recordDeload } from './mutations';
-
 export async function listRecentTopSets(
   supabase: SupabaseClient,
   routineExerciseId: string,

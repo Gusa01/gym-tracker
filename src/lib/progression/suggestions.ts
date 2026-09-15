@@ -18,7 +18,7 @@ export async function computeSuggestions(
   let deloadExerciseName: string | null = null;
 
   for (const exercise of topSetExercises) {
-    const recentTopSets = await listRecentTopSets(supabase, exercise.id).catch(() => []);
+    const recentTopSets = await listRecentTopSets(supabase, exercise.id);
     if (hasConsecutiveDeficit(recentTopSets, exercise.top_set_reps ?? 0, exercise.rir_min)) {
       deloadExerciseName = exercise.exercise_name;
       break;

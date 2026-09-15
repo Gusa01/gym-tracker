@@ -1,6 +1,7 @@
 import { createAdminClient } from '../../helpers/supabaseAdmin';
 import { seedActiveRoutine } from '../../helpers/seedActiveRoutine';
-import { listRecentTopSets, recordDeload } from '../../../src/lib/progression/queries';
+import { listRecentTopSets } from '../../../src/lib/progression/queries';
+import { recordDeload } from '../../../src/lib/progression/mutations';
 import { computeSuggestions } from '../../../src/lib/progression/suggestions';
 import { RoutineExerciseWithName } from '../../../src/lib/routines/types';
 
