@@ -4,7 +4,7 @@ import { PendingWrite } from '../sync/flushQueue';
 export function enqueueWrite(
   db: SQLiteDatabase,
   id: string,
-  entity: 'workout_sessions' | 'logged_sets',
+  entity: PendingWrite['entity'],
   payload: Record<string, unknown>
 ): void {
   db.runSync(

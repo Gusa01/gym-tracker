@@ -9,6 +9,8 @@ import { LoggedSet, SetType } from '../lib/sessions/types';
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
 import { flushOnly } from '../lib/sync/syncService';
 import { useAuthSession } from './useAuthSession';
+import { buildPrescribedSets } from '../lib/sessions/prescribedSets';
+import { isExerciseHit, computeWeightIncrement, computeNextExerciseState } from '../lib/progression/rules';
 
 export function useSessionSets(sessionId: string | undefined) {
   const { session } = useAuthSession();
@@ -40,7 +42,7 @@ export function useSessionSets(sessionId: string | undefined) {
     const weights: Record<string, number | null> = {};
     dayExercises.forEach((exercise) => {
       const state = getCachedExerciseState(getDatabase(), exercise.exercise_id);
-      weights[exercise.id] = state?.current_weight ?? null;
+      weights[exercise.id] = state?.suggested_next_weight ?? state?.current_weight ?? null;
     });
     setWeightByExercise(weights);
   }, []);
@@ -57,7 +59,7 @@ export function useSessionSets(sessionId: string | undefined) {
     reps: number,
     rir: number | null
   ) {
-    if (!sessionId) return;
+    if (!sessionId || !userId) return;
     const id = Crypto.randomUUID();
     const payload = {
       id,
@@ -71,8 +73,30 @@ export function useSessionSets(sessionId: string | undefined) {
       created_at: new Date().toISOString(),
     };
     enqueueWrite(getDatabase(), id, 'logged_sets', payload);
-    setLoggedSets((prev) => [...prev, payload as LoggedSet]);
-    if (userId) flushOnly(getDatabase(), supabase).catch(() => {});
+    const updatedLoggedSets = [...loggedSets, payload as LoggedSet];
+    setLoggedSets(updatedLoggedSets);
+
+    const exercise = exercises.find((e) => e.id === routineExerciseId);
+    if (exercise && exercise.muscle_group !== 'core') {
+      const setsForExercise = updatedLoggedSets.filter((s) => s.routine_exercise_id === routineExerciseId);
+      const prescribed = buildPrescribedSets(exercise);
+      if (setsForExercise.length === prescribed.length) {
+        const hit = isExerciseHit(setsForExercise, exercise);
+        const weightUsed = setsForExercise.find((s) => s.set_index === 1)?.weight ?? weight;
+        const increment = computeWeightIncrement(exercise.muscle_group ?? '');
+        const current = getCachedExerciseState(getDatabase(), exercise.exercise_id);
+        const update = computeNextExerciseState(current, weightUsed, hit, increment);
+        const progressWriteId = Crypto.randomUUID();
+        enqueueWrite(getDatabase(), progressWriteId, 'user_exercise_state', {
+          user_id: userId,
+          exercise_id: exercise.exercise_id,
+          ...update,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    flushOnly(getDatabase(), supabase).catch(() => {});
   }
 
   async function completeSession() {
