@@ -77,7 +77,7 @@ export function useSessionSets(sessionId: string | undefined) {
     setLoggedSets(updatedLoggedSets);
 
     const exercise = exercises.find((e) => e.id === routineExerciseId);
-    if (exercise && exercise.muscle_group !== 'core') {
+    if (exercise && exercise.muscle_group !== 'core' && exercise.rep_unit !== 'seconds' && exercise.role !== 'core') {
       const setsForExercise = updatedLoggedSets.filter((s) => s.routine_exercise_id === routineExerciseId);
       const prescribed = buildPrescribedSets(exercise);
       if (setsForExercise.length === prescribed.length) {
