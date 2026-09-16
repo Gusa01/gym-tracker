@@ -104,7 +104,7 @@ describe('row level security', () => {
   it('lets any authenticated user read the shared exercise catalog', async () => {
     const { data: exercise } = await admin
       .from('exercises')
-      .insert({ name: `RLS Catalog Test ${Date.now()}`, muscle_group: 'legs' })
+      .upsert({ name: '[test-fixture] RLS Catalog Test Exercise', muscle_group: 'legs' }, { onConflict: 'name' })
       .select()
       .single();
 
@@ -115,6 +115,8 @@ describe('row level security', () => {
       .maybeSingle();
     expect(error).toBeNull();
     expect(data?.id).toBe(exercise!.id);
+
+    await admin.from('exercises').delete().eq('id', exercise!.id);
   });
 
   it("blocks user B from deleting user A's routine (RLS filters, admin confirms it survives)", async () => {
