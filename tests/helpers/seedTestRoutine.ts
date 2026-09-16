@@ -1,14 +1,17 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { findOrCreateExercise } from '../../src/lib/routines/mutations';
+
+// Reuses one fixed, idempotent row instead of inserting a uniquely-named exercise per
+// call — the old `Test Exercise ${Date.now()}` pattern created a new permanent row on
+// every test run and never cleaned up, which eventually pushed the shared `exercises`
+// catalog past PostgREST's default page size and broke `listExercises` for real users.
+const FIXTURE_EXERCISE_NAME = '[test-fixture] Shared Exercise';
+const FIXTURE_EXERCISE_NAME_USER_SCOPED = '[test-fixture] Shared Exercise (RLS-scoped insert)';
 
 export async function seedTestRoutine(supabase: SupabaseClient, userId: string) {
   const suffix = Date.now() + Math.random();
 
-  const { data: exercise, error: exerciseError } = await supabase
-    .from('exercises')
-    .insert({ name: `Test Exercise ${suffix}`, muscle_group: 'legs' })
-    .select()
-    .single();
-  if (exerciseError) throw exerciseError;
+  const exercise = await findOrCreateExercise(supabase, FIXTURE_EXERCISE_NAME, 'legs');
 
   const { data: routine, error: routineError } = await supabase
     .from('routines')
@@ -54,12 +57,7 @@ export async function seedTestRoutine(supabase: SupabaseClient, userId: string) 
 export async function seedTestRoutineAsUser(supabase: SupabaseClient, userId: string) {
   const suffix = Date.now() + Math.random();
 
-  const { data: exercise, error: exerciseError } = await supabase
-    .from('exercises')
-    .insert({ name: `Test Exercise (user) ${suffix}`, muscle_group: 'legs' })
-    .select()
-    .single();
-  if (exerciseError) throw exerciseError;
+  const exercise = await findOrCreateExercise(supabase, FIXTURE_EXERCISE_NAME_USER_SCOPED, 'legs');
 
   const { data: routine, error: routineError } = await supabase
     .from('routines')

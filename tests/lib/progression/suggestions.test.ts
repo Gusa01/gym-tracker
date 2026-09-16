@@ -19,18 +19,27 @@ beforeAll(async () => {
   userId = data.user.id;
 });
 
+const createdExerciseIds: string[] = [];
+
 afterAll(async () => {
   await supabase.auth.admin.deleteUser(userId);
+  // Each seedTopSetExercise call needs a genuinely distinct, uniquely-named row (the
+  // `exercises.name` column is unique), so unlike the other fixed-fixture-name test
+  // helpers, these can't just be reused across runs — clean them up explicitly instead.
+  if (createdExerciseIds.length > 0) {
+    await supabase.from('exercises').delete().in('id', createdExerciseIds);
+  }
 });
 
 async function seedTopSetExercise(dayId: string): Promise<RoutineExerciseWithName> {
   const suffix = Date.now() + Math.random();
   const { data: exercise, error: exerciseError } = await supabase
     .from('exercises')
-    .insert({ name: `Sentadilla ${suffix}`, muscle_group: 'lower' })
+    .insert({ name: `[test-fixture] Sentadilla ${suffix}`, muscle_group: 'lower' })
     .select()
     .single();
   if (exerciseError) throw exerciseError;
+  createdExerciseIds.push(exercise.id);
 
   const { data: routineExercise, error: routineExerciseError } = await supabase
     .from('routine_exercises')

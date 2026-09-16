@@ -1,16 +1,21 @@
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../../src/lib/supabase';
-import { useAuthSession } from '../../src/hooks/useAuthSession';
 import { useHomeData } from '../../src/hooks/useHomeData';
+import { WeekCalendarStrip } from '../../src/components/WeekCalendarStrip';
+
+function formatShortDate(dateStr: string): string {
+  const [, month, day] = dateStr.split('-');
+  return `${day}/${month}`;
+}
 
 export default function Home() {
-  const { session } = useAuthSession();
   const {
     loading,
     error,
     routineName,
     weekNumber,
+    weekProgress,
+    weekCalendar,
     todayDayName,
     todayIsRestDay,
     sessionStatus,
@@ -22,6 +27,8 @@ export default function Home() {
     dismissSwitch,
     acceptDeload,
     acceptSwitch,
+    recentActivity,
+    consistencyStreak,
   } = useHomeData();
 
   async function handleStart() {
@@ -48,44 +55,74 @@ export default function Home() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Fit Tracker</Text>
-      <Text>Sesión iniciada como {session?.user.email}</Text>
-
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       {loading && <ActivityIndicator />}
       {error && <Text style={styles.error}>{error}</Text>}
 
       {!loading && !error && (
-        <View style={styles.card}>
+        <>
           {routineName ? (
             <>
-              <Text style={styles.routineName}>{routineName}</Text>
-              <Text style={styles.weekLabel}>Semana {weekNumber}</Text>
-              {todayDayName ? (
-                todayIsRestDay ? (
-                  <Text>Hoy: {todayDayName} (descanso)</Text>
+              <View style={styles.card}>
+                <Text style={styles.routineName}>{routineName}</Text>
+                {weekProgress !== null ? (
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${weekProgress * 100}%` }]} />
+                  </View>
                 ) : (
-                  <>
-                    <Text>Hoy: {todayDayName}</Text>
-                    {sessionStatus === 'completed' ? (
-                      <Text style={styles.doneLabel}>✓ Entrenamiento completado hoy</Text>
-                    ) : (
-                      <Pressable style={styles.button} onPress={handleStart}>
-                        <Text style={styles.buttonText}>
-                          {sessionStatus === 'in_progress' ? 'Continuar entrenamiento' : 'Empezar entrenamiento'}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </>
-                )
-              ) : (
-                <Text>No hay entrenamiento programado para hoy.</Text>
+                  <Text style={styles.weekLabel}>Semana {weekNumber}</Text>
+                )}
+
+                <WeekCalendarStrip days={weekCalendar} />
+
+                {todayDayName ? (
+                  todayIsRestDay ? (
+                    <Text>Hoy: {todayDayName} (descanso)</Text>
+                  ) : (
+                    <>
+                      <Text>Hoy: {todayDayName}</Text>
+                      {sessionStatus === 'completed' ? (
+                        <Text style={styles.doneLabel}>✓ Entrenamiento completado hoy</Text>
+                      ) : (
+                        <Pressable style={styles.button} onPress={handleStart}>
+                          <Text style={styles.buttonText}>
+                            {sessionStatus === 'in_progress' ? 'Continuar entrenamiento' : 'Empezar entrenamiento'}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </>
+                  )
+                ) : (
+                  <Text>No hay entrenamiento programado para hoy.</Text>
+                )}
+              </View>
+
+              {consistencyStreak > 0 && (
+                <View style={styles.streakCard}>
+                  <Text style={styles.streakText}>
+                    🔥 {consistencyStreak}{' '}
+                    {consistencyStreak === 1 ? 'semana consecutiva' : 'semanas consecutivas'} entrenando
+                  </Text>
+                </View>
+              )}
+
+              {recentActivity.length > 0 && (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Actividad reciente</Text>
+                  {recentActivity.map((entry, index) => (
+                    <Text key={index} style={styles.activityRow}>
+                      {entry.dayName} — {formatShortDate(entry.sessionDate)}
+                    </Text>
+                  ))}
+                </View>
               )}
             </>
           ) : (
-            <Text>No tenés una rutina activa. Activá una desde "Ver rutinas".</Text>
+            <View style={styles.card}>
+              <Text>No tenés una rutina activa. Activá una desde el menú "Rutinas".</Text>
+            </View>
           )}
-        </View>
+        </>
       )}
 
       {deloadExerciseName && (
@@ -120,27 +157,33 @@ export default function Home() {
           </View>
         </View>
       )}
-
-      <Pressable style={styles.button} onPress={() => router.push('/(app)/routines' as any)}>
-        <Text style={styles.buttonText}>Ver rutinas</Text>
-      </Pressable>
-      <Pressable style={styles.button} onPress={() => supabase.auth.signOut()}>
-        <Text style={styles.buttonText}>Cerrar sesión</Text>
-      </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 16 },
-  title: { fontSize: 28, fontWeight: '700' },
+  screen: { flex: 1 },
+  container: { gap: 16, padding: 16 },
   card: { width: '100%', gap: 8, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 16 },
   routineName: { fontSize: 20, fontWeight: '700' },
   weekLabel: { color: '#666' },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: '#eee', overflow: 'hidden' },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: '#111' },
   doneLabel: { color: '#16a34a', fontWeight: '600' },
   error: { color: '#dc2626' },
   button: { backgroundColor: '#111', borderRadius: 8, padding: 14 },
-  buttonText: { color: '#fff', fontWeight: '600' },
+  buttonText: { color: '#fff', fontWeight: '600', textAlign: 'center' },
+  streakCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    backgroundColor: '#fffbeb',
+    borderRadius: 8,
+    padding: 12,
+  },
+  streakText: { color: '#92400e', fontWeight: '600' },
+  sectionTitle: { fontWeight: '700', fontSize: 15 },
+  activityRow: { color: '#333' },
   banner: { width: '100%', gap: 8, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, padding: 16 },
   bannerText: { color: '#111' },
   bannerActions: { flexDirection: 'row', gap: 8 },

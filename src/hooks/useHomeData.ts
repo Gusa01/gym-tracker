@@ -6,7 +6,9 @@ import { useAuthSession } from './useAuthSession';
 import { getDatabase } from '../lib/sqlite/db';
 import { resolveToday, getCachedRoutineDays, getCachedDayExercises } from '../lib/sqlite/cache';
 import { formatDateOnly } from '../lib/sessions/weekResolution';
-import { getSessionForDate } from '../lib/sessions/queries';
+import { getSessionForDate, listRecentCompletedSessions } from '../lib/sessions/queries';
+import { buildWeekCalendar, computeWeekProgress, WeekCalendarDay } from '../lib/home/weekCalendar';
+import { computeConsecutiveActiveWeeks } from '../lib/home/streak';
 import { saveCurrentSession, loadCurrentSession } from '../lib/sessions/currentSessionStorage';
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
 import { flushOnly, syncNow } from '../lib/sync/syncService';
@@ -36,6 +38,10 @@ export function useHomeData() {
   const [nextRoutineId, setNextRoutineId] = useState<string | null>(null);
   const [nextRoutineName, setNextRoutineName] = useState<string | null>(null);
   const [switchDismissed, setSwitchDismissed] = useState(false);
+  const [weekCalendar, setWeekCalendar] = useState<WeekCalendarDay[]>([]);
+  const [weekProgress, setWeekProgress] = useState<number | null>(null);
+  const [recentActivity, setRecentActivity] = useState<{ sessionDate: string; dayName: string }[]>([]);
+  const [consistencyStreak, setConsistencyStreak] = useState(0);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -57,6 +63,10 @@ export function useHomeData() {
         setDeloadExerciseName(null);
         setRoutineSwitchAvailable(false);
         setNextRoutineName(null);
+        setWeekCalendar([]);
+        setWeekProgress(null);
+        setRecentActivity([]);
+        setConsistencyStreak(0);
         return;
       }
       setRoutineName(resolved.routine.name);
@@ -65,6 +75,19 @@ export function useHomeData() {
       setDeloadDismissed(false);
       setSwitchDismissed(false);
       const days = getCachedRoutineDays(getDatabase(), resolved.routine.id);
+      setWeekCalendar(buildWeekCalendar(resolved.routine.weekday_schedule, days, resolved.weekNumber, new Date()));
+      setWeekProgress(computeWeekProgress(resolved.weekNumber, resolved.routine.suggested_duration_weeks));
+
+      // 200 sessions is enough history for a multi-year streak; the previous default of 30
+      // silently capped the counter at ~6 weeks for an actively-training user.
+      const recentSessions = await listRecentCompletedSessions(supabase, userId, 200).catch(() => null);
+      if (recentSessions !== null) {
+        setRecentActivity(recentSessions.slice(0, 5));
+        setConsistencyStreak(computeConsecutiveActiveWeeks(recentSessions.map((s) => s.sessionDate), new Date()));
+      }
+      // else: offline / request failure — preserve whatever recentActivity/consistencyStreak
+      // already held from the last successful load, instead of flashing them to empty/0.
+
       const exercisesByDay = days.map((d) => getCachedDayExercises(getDatabase(), d.id));
       const seenExerciseIds = new Set<string>();
       const topSetExercises = exercisesByDay.flat().filter((exercise) => {
@@ -214,5 +237,9 @@ export function useHomeData() {
     dismissSwitch,
     acceptDeload,
     acceptSwitch,
+    weekCalendar,
+    weekProgress,
+    recentActivity,
+    consistencyStreak,
   };
 }

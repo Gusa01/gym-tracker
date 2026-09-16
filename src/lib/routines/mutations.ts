@@ -383,6 +383,19 @@ export async function findOrCreateExercise(
     .insert({ name, muscle_group: muscleGroup })
     .select()
     .single();
-  if (createError) throw createError;
+  if (createError) {
+    // Another concurrent caller created the same name between our select and insert —
+    // fetch what they created instead of failing on the unique constraint.
+    if (createError.code === '23505') {
+      const { data: raceWinner, error: raceError } = await supabase
+        .from('exercises')
+        .select('*')
+        .eq('name', name)
+        .single();
+      if (raceError) throw raceError;
+      return raceWinner;
+    }
+    throw createError;
+  }
   return created;
 }

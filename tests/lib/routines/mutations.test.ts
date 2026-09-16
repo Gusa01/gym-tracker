@@ -110,7 +110,7 @@ describe('routine mutations', () => {
     expect(reordered![0].id).toBe(dayTwo.id);
     expect(reordered![1].id).toBe(dayOne.id);
 
-    const exercise = await findOrCreateExercise(supabase, `Test Exercise ${Date.now()}`, 'upper');
+    const exercise = await findOrCreateExercise(supabase, '[test-fixture] Cascade Delete Exercise', 'upper');
     const routineExercise = await createRoutineExercise(supabase, dayOne.id, {
       exerciseId: exercise.id,
       role: 'main',
@@ -138,7 +138,7 @@ describe('routine mutations', () => {
 
   it('soft-deletes an exercise within a day', async () => {
     const { day } = await seedTestRoutine(supabase, userId);
-    const exerciseOne = await findOrCreateExercise(supabase, `Delete Exercise A ${Date.now()}`, 'upper');
+    const exerciseOne = await findOrCreateExercise(supabase, '[test-fixture] Delete Exercise A', 'upper');
     const input = {
       role: 'accessory' as const,
       schemeType: 'normal' as const,
@@ -170,9 +170,9 @@ describe('routine mutations', () => {
 
   it('reorderRoutineExercises applies an arbitrary new order in one call', async () => {
     const { day } = await seedTestRoutine(supabase, userId);
-    const exerciseOne = await findOrCreateExercise(supabase, `Drag Exercise A ${Date.now()}`, 'upper');
-    const exerciseTwo = await findOrCreateExercise(supabase, `Drag Exercise B ${Date.now()}`, 'upper');
-    const exerciseThree = await findOrCreateExercise(supabase, `Drag Exercise C ${Date.now()}`, 'upper');
+    const exerciseOne = await findOrCreateExercise(supabase, '[test-fixture] Drag Exercise A', 'upper');
+    const exerciseTwo = await findOrCreateExercise(supabase, '[test-fixture] Drag Exercise B', 'upper');
+    const exerciseThree = await findOrCreateExercise(supabase, '[test-fixture] Drag Exercise C', 'upper');
     const input = {
       role: 'accessory' as const,
       schemeType: 'normal' as const,
@@ -215,10 +215,11 @@ describe('routine mutations', () => {
   });
 
   it('findOrCreateExercise deduplicates by name', async () => {
-    const name = `Dedup Exercise ${Date.now()}`;
+    const name = '[test-fixture] Dedup Exercise';
     const first = await findOrCreateExercise(supabase, name, 'core');
     const second = await findOrCreateExercise(supabase, name, 'core');
     expect(second.id).toBe(first.id);
+    await supabase.from('exercises').delete().eq('id', first.id);
   });
 
   it('updateRoutine patches only the given fields', async () => {
