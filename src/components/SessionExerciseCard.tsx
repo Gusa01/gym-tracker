@@ -30,13 +30,20 @@ export function SessionExerciseCard({ exercise, initialWeight, loggedSets, onLog
 
   const prescribed = buildPrescribedSets(exercise);
   const showRir = exercise.rir_min !== null;
+  const unitLabel = exercise.rep_unit === 'seconds' ? 'Segundos' : 'Reps';
 
-  async function handleLog(setIndex: number, setType: SetType) {
-    if (!weight || !reps) return;
+  const loggedByIndex = new Map(
+    loggedSets.filter((s) => s.routine_exercise_id === exercise.id).map((s) => [s.set_index, s])
+  );
+  const nextSet = prescribed.find((set) => !loggedByIndex.has(set.setIndex));
+
+  async function handleLogNext() {
+    if (!nextSet || !weight || !reps) return;
     setSaving(true);
     try {
-      await onLogSet(setIndex, setType, Number(weight), Number(reps), showRir ? rir : null);
-      setReps('');
+      await onLogSet(nextSet.setIndex, nextSet.setType, Number(weight), Number(reps), showRir ? rir : null);
+      // Reps/weight/RIR usually repeat across sets of the same exercise — leave them as-is
+      // so the next set is a single tap to confirm instead of retyping the same values.
     } finally {
       setSaving(false);
     }
@@ -47,46 +54,68 @@ export function SessionExerciseCard({ exercise, initialWeight, loggedSets, onLog
       <Text style={styles.name}>{exercise.exercise_name}</Text>
       <Text style={styles.target}>{formatTargetScheme(exercise)}</Text>
 
-      <Text style={styles.label}>Peso (kg)</Text>
-      <WeightStepper value={weight} onChange={setWeight} />
-
-      <Text style={styles.label}>{exercise.rep_unit === 'seconds' ? 'Segundos' : 'Reps'}</Text>
-      <StepperInput value={reps} onChange={setReps} min={0} max={200} step={exercise.rep_unit === 'seconds' ? 5 : 1} />
-
-      {showRir && (
-        <>
-          <Text style={styles.label}>RIR</Text>
-          <View style={styles.rirRow}>
-            {RIR_OPTIONS.map((option) => (
-              <Pressable
-                key={option}
-                style={[styles.rirOption, rir === option && styles.rirOptionSelected]}
-                onPress={() => setRir(option)}
-              >
-                <Text style={rir === option ? styles.rirTextSelected : styles.rirText}>{option}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
-
       {prescribed.map((set) => {
-        const done = loggedSets.some(
-          (logged) => logged.routine_exercise_id === exercise.id && logged.set_index === set.setIndex
-        );
+        const logged = loggedByIndex.get(set.setIndex);
+        if (!logged) return null;
         return (
-          <Pressable
-            key={set.setIndex}
-            style={[styles.setRow, done && styles.setRowDone]}
-            disabled={done || saving}
-            onPress={() => handleLog(set.setIndex, set.setType)}
-          >
-            <Text>
-              {done ? '✓ ' : ''}Serie {set.setIndex} ({SET_TYPE_LABELS[set.setType]})
+          <View key={set.setIndex} style={styles.loggedRow}>
+            <Text style={styles.loggedText}>
+              ✓ Serie {set.setIndex} ({SET_TYPE_LABELS[set.setType]}): {logged.weight}kg × {logged.reps}
+              {exercise.rep_unit === 'seconds' ? 's' : ' reps'}
+              {logged.rir !== null ? ` · RIR ${logged.rir}` : ''}
             </Text>
-          </Pressable>
+          </View>
         );
       })}
+
+      {nextSet ? (
+        <>
+          <Text style={styles.activeSetTitle}>
+            Serie {nextSet.setIndex} de {prescribed.length} — {SET_TYPE_LABELS[nextSet.setType]}
+          </Text>
+
+          <Text style={styles.label}>Peso (kg)</Text>
+          <WeightStepper value={weight} onChange={setWeight} />
+
+          <Text style={styles.label}>{unitLabel}</Text>
+          <StepperInput
+            value={reps}
+            onChange={setReps}
+            min={0}
+            max={200}
+            step={exercise.rep_unit === 'seconds' ? 5 : 1}
+          />
+
+          {showRir && (
+            <>
+              <Text style={styles.label}>RIR</Text>
+              <View style={styles.rirRow}>
+                {RIR_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option}
+                    style={[styles.rirOption, rir === option && styles.rirOptionSelected]}
+                    onPress={() => setRir(option)}
+                  >
+                    <Text style={rir === option ? styles.rirTextSelected : styles.rirText}>{option}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+
+          <Pressable
+            style={[styles.saveButton, (!weight || !reps || saving) && styles.saveButtonDisabled]}
+            disabled={!weight || !reps || saving}
+            onPress={handleLogNext}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Guardando...' : `Guardar serie ${nextSet.setIndex}`}
+            </Text>
+          </Pressable>
+        </>
+      ) : (
+        <Text style={styles.doneText}>✓ Ejercicio completo</Text>
+      )}
     </View>
   );
 }
@@ -96,11 +125,22 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, fontWeight: '700' },
   target: { color: '#666' },
   label: { fontWeight: '600', marginTop: 4 },
+  activeSetTitle: { fontWeight: '700', fontSize: 15, marginTop: 4 },
   rirRow: { flexDirection: 'row', gap: 6 },
   rirOption: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 },
   rirOptionSelected: { backgroundColor: '#111', borderColor: '#111' },
   rirText: { color: '#111' },
   rirTextSelected: { color: '#fff' },
-  setRow: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10 },
-  setRowDone: { backgroundColor: '#f0fdf4', borderColor: '#16a34a' },
+  loggedRow: {
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    padding: 10,
+  },
+  loggedText: { color: '#166534' },
+  saveButton: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 4 },
+  saveButtonDisabled: { opacity: 0.5 },
+  saveButtonText: { color: '#fff', fontWeight: '700' },
+  doneText: { color: '#16a34a', fontWeight: '700', marginTop: 4 },
 });
