@@ -23,7 +23,7 @@ const SET_TYPE_LABELS: Record<SetType, string> = {
 };
 
 export function SessionExerciseCard({ exercise, initialWeight, loggedSets, onLogSet }: SessionExerciseCardProps) {
-  const [weight, setWeight] = useState(initialWeight !== null ? String(initialWeight) : '');
+  const [weight, setWeight] = useState(initialWeight !== null ? String(initialWeight) : '0');
   const [reps, setReps] = useState('');
   const [rir, setRir] = useState<number | null>(exercise.rir_min !== null ? exercise.rir_min : null);
   const [saving, setSaving] = useState(false);
