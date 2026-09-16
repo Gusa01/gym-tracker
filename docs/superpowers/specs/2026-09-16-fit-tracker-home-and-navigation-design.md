@@ -87,7 +87,7 @@ The `session` route group is still reachable via `router.push` but hidden from t
 
 A custom drawer content component (`src/components/AppDrawerContent.tsx`) renders the default item list plus a "Cerrar sesión" button pinned at the bottom, calling `supabase.auth.signOut()` (same call already used inline on Home today).
 
-**New dependency:** `@react-navigation/drawer`, added via `npx expo install @react-navigation/drawer`.
+**No new dependency needed.** This project's installed `expo-router` (SDK 57) vendors its own drawer implementation and exports everything needed — `Drawer`, `DrawerContentScrollView`, `DrawerItemList`, etc. — directly from `expo-router/drawer`, specifically so apps don't need `@react-navigation/drawer` as a separate dependency. Its only native dependency (`react-native-drawer-layout`) is already present transitively via `expo-router` itself.
 
 **Known follow-up risk (not a design decision, a verification item):** the root `app/_layout.tsx` currently wraps everything in a `SafeAreaView` with `edges={['top', 'bottom']}`. Drawer screens get their own header (needed for the hamburger icon that opens the drawer), which may double up on top spacing. This plan's implementation task must check this on-device and adjust the root layout's `edges` if needed — noted here so it isn't a surprise, not resolved in this doc since it needs a running app to see.
 
