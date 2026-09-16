@@ -40,3 +40,22 @@ export async function listSessionSets(supabase: SupabaseClient, sessionId: strin
   if (error) throw error;
   return data;
 }
+
+export async function listRecentCompletedSessions(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = 30
+): Promise<{ sessionDate: string; dayName: string }[]> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select('session_date, routine_days(name)')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .order('session_date', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data as any[]).map((row) => ({
+    sessionDate: row.session_date,
+    dayName: row.routine_days.name,
+  }));
+}

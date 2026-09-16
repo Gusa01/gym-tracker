@@ -1,6 +1,11 @@
 import { createAdminClient } from '../../helpers/supabaseAdmin';
 import { seedActiveRoutine } from '../../helpers/seedActiveRoutine';
-import { getActiveRoutine, getSessionForDate, listSessionSets } from '../../../src/lib/sessions/queries';
+import {
+  getActiveRoutine,
+  getSessionForDate,
+  listSessionSets,
+  listRecentCompletedSessions,
+} from '../../../src/lib/sessions/queries';
 
 const supabase = createAdminClient();
 const testEmail = `session-queries-${Date.now()}@example.com`;
@@ -85,5 +90,49 @@ describe('getSessionForDate / listSessionSets', () => {
     expect(sets).toHaveLength(1);
     expect(sets[0].weight).toBe(60);
     expect(sets[0].reps).toBe(8);
+  });
+});
+
+describe('listRecentCompletedSessions', () => {
+  it('returns only completed sessions, newest first, with the day name joined in', async () => {
+    const { day } = await seedActiveRoutine(supabase, userId);
+
+    async function insertSession(sessionDate: string, status: 'in_progress' | 'completed') {
+      const { error } = await supabase.from('workout_sessions').insert({
+        user_id: userId,
+        routine_day_id: day.id,
+        session_date: sessionDate,
+        week_number: 1,
+        status,
+      });
+      if (error) throw error;
+    }
+
+    await insertSession('2026-03-01', 'completed');
+    await insertSession('2026-03-08', 'completed');
+    await insertSession('2026-03-15', 'in_progress'); // not completed, must be excluded
+
+    const result = await listRecentCompletedSessions(supabase, userId);
+
+    expect(result.map((r) => r.sessionDate)).toEqual(['2026-03-08', '2026-03-01']);
+    expect(result.every((r) => r.dayName === day.name)).toBe(true);
+  });
+
+  it('respects the limit parameter', async () => {
+    const { day } = await seedActiveRoutine(supabase, userId);
+    for (const sessionDate of ['2026-04-01', '2026-04-08', '2026-04-15']) {
+      const { error } = await supabase.from('workout_sessions').insert({
+        user_id: userId,
+        routine_day_id: day.id,
+        session_date: sessionDate,
+        week_number: 1,
+        status: 'completed',
+      });
+      if (error) throw error;
+    }
+
+    const result = await listRecentCompletedSessions(supabase, userId, 2);
+    expect(result).toHaveLength(2);
+    expect(result[0].sessionDate).toBe('2026-04-15');
   });
 });
