@@ -56,6 +56,6 @@ export async function listRecentCompletedSessions(
   if (error) throw error;
   return (data as any[]).map((row) => ({
     sessionDate: row.session_date,
-    dayName: row.routine_days.name,
+    dayName: row.routine_days?.name ?? '',
   }));
 }

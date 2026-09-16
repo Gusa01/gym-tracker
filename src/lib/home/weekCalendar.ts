@@ -49,6 +49,6 @@ export function buildWeekCalendar(
 }
 
 export function computeWeekProgress(weekNumber: number, suggestedDurationWeeks: number | null): number | null {
-  if (suggestedDurationWeeks === null) return null;
+  if (suggestedDurationWeeks === null || suggestedDurationWeeks <= 0) return null;
   return Math.min(weekNumber / suggestedDurationWeeks, 1);
 }

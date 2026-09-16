@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useHomeData } from '../../src/hooks/useHomeData';
 import { WeekCalendarStrip } from '../../src/components/WeekCalendarStrip';
@@ -55,7 +55,7 @@ export default function Home() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       {loading && <ActivityIndicator />}
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -157,12 +157,13 @@ export default function Home() {
           </View>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, gap: 16, padding: 16 },
+  screen: { flex: 1 },
+  container: { gap: 16, padding: 16 },
   card: { width: '100%', gap: 8, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 16 },
   routineName: { fontSize: 20, fontWeight: '700' },
   weekLabel: { color: '#666' },

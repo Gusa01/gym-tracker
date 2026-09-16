@@ -65,4 +65,8 @@ describe('computeWeekProgress', () => {
   it('caps at 1 when the current week exceeds the suggested duration', () => {
     expect(computeWeekProgress(10, 8)).toBe(1);
   });
+
+  it('returns null for a zero or negative suggested duration instead of dividing to Infinity', () => {
+    expect(computeWeekProgress(3, 0)).toBeNull();
+  });
 });

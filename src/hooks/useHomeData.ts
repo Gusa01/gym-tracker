@@ -78,9 +78,15 @@ export function useHomeData() {
       setWeekCalendar(buildWeekCalendar(resolved.routine.weekday_schedule, days, resolved.weekNumber, new Date()));
       setWeekProgress(computeWeekProgress(resolved.weekNumber, resolved.routine.suggested_duration_weeks));
 
-      const recentSessions = await listRecentCompletedSessions(supabase, userId).catch(() => []);
-      setRecentActivity(recentSessions.slice(0, 5));
-      setConsistencyStreak(computeConsecutiveActiveWeeks(recentSessions.map((s) => s.sessionDate), new Date()));
+      // 200 sessions is enough history for a multi-year streak; the previous default of 30
+      // silently capped the counter at ~6 weeks for an actively-training user.
+      const recentSessions = await listRecentCompletedSessions(supabase, userId, 200).catch(() => null);
+      if (recentSessions !== null) {
+        setRecentActivity(recentSessions.slice(0, 5));
+        setConsistencyStreak(computeConsecutiveActiveWeeks(recentSessions.map((s) => s.sessionDate), new Date()));
+      }
+      // else: offline / request failure — preserve whatever recentActivity/consistencyStreak
+      // already held from the last successful load, instead of flashing them to empty/0.
 
       const exercisesByDay = days.map((d) => getCachedDayExercises(getDatabase(), d.id));
       const seenExerciseIds = new Set<string>();
