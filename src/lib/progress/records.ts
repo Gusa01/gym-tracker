@@ -42,11 +42,13 @@ function maxNullable(a: number | null, b: number | null): number | null {
 
 export function mergeCachedRecords(existing: CachedRecords | null, incoming: CachedRecords): CachedRecords {
   if (!existing) return incoming;
+  // On a weighted exercise, weight-0 sets never qualify for a reps record (spec §7 step 5).
+  const existingIsWeighted = existing.best_e1rm !== null || existing.best_weight !== null;
   return {
     best_e1rm: maxNullable(existing.best_e1rm, incoming.best_e1rm),
     best_weight: maxNullable(existing.best_weight, incoming.best_weight),
     best_seconds: maxNullable(existing.best_seconds, incoming.best_seconds),
-    best_reps: maxNullable(existing.best_reps, incoming.best_reps),
+    best_reps: existingIsWeighted ? existing.best_reps : maxNullable(existing.best_reps, incoming.best_reps),
   };
 }
 

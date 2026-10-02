@@ -96,7 +96,16 @@ describe('mergeCachedRecords', () => {
         { best_e1rm: 96, best_weight: 85, best_seconds: null, best_reps: null },
         { best_e1rm: 98, best_weight: 80, best_seconds: null, best_reps: 12 }
       )
-    ).toEqual({ best_e1rm: 98, best_weight: 85, best_seconds: null, best_reps: 12 });
+    ).toEqual({ best_e1rm: 98, best_weight: 85, best_seconds: null, best_reps: null });
+  });
+
+  it('ignores incoming best_reps when the existing row already has weighted data', () => {
+    expect(
+      mergeCachedRecords(
+        { best_e1rm: 96, best_weight: 85, best_seconds: null, best_reps: null },
+        { best_e1rm: null, best_weight: null, best_seconds: null, best_reps: 30 }
+      )
+    ).toEqual({ best_e1rm: 96, best_weight: 85, best_seconds: null, best_reps: null });
   });
 
   it('returns the incoming records when there is nothing cached', () => {
