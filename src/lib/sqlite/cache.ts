@@ -4,6 +4,9 @@ import { getActiveRoutine } from '../sessions/queries';
 import { listRoutineDays, listDayExercises } from '../routines/queries';
 import { RoutineExerciseWithName } from '../routines/types';
 import { computeWeekNumber, weekdayFromDate, resolveTodayDayId } from '../sessions/weekResolution';
+import { listExerciseSetHistory } from '../progress/queries';
+import { mergeCachedRecords, recordsByExercise } from '../progress/records';
+import { CachedRecords } from '../progress/types';
 
 export interface CachedRoutine {
   id: string;
@@ -48,11 +51,20 @@ export async function refreshLocalCache(
     .eq('user_id', userId);
   if (statesError) throw statesError;
 
+  // A history failure must not block the routine cache refresh; it just leaves the
+  // previous records snapshot in place for live PR detection.
+  const history = await listExerciseSetHistory(supabase, userId).catch(() => null);
+
   db.withTransactionSync(() => {
     db.runSync('delete from routines_cache');
     db.runSync('delete from routine_days_cache');
     db.runSync('delete from routine_exercises_cache');
     db.runSync('delete from user_exercise_state_cache');
+
+    if (history) {
+      db.runSync('delete from exercise_records_cache');
+      recordsByExercise(history).forEach((records, exerciseId) => writeExerciseRecords(db, exerciseId, records));
+    }
 
     if (!routine) return;
 
@@ -174,6 +186,27 @@ export function getCachedExerciseState(db: SQLiteDatabase, exerciseId: string): 
     [exerciseId]
   );
   return rows[0] ?? null;
+}
+
+export function getCachedExerciseRecords(db: SQLiteDatabase, exerciseId: string): CachedRecords | null {
+  const rows = db.getAllSync<CachedRecords>(
+    'select best_e1rm, best_weight, best_seconds, best_reps from exercise_records_cache where exercise_id = ?',
+    [exerciseId]
+  );
+  return rows[0] ?? null;
+}
+
+function writeExerciseRecords(db: SQLiteDatabase, exerciseId: string, records: CachedRecords): void {
+  db.runSync(
+    `insert or replace into exercise_records_cache (exercise_id, best_e1rm, best_weight, best_seconds, best_reps)
+     values (?, ?, ?, ?, ?)`,
+    [exerciseId, records.best_e1rm, records.best_weight, records.best_seconds, records.best_reps]
+  );
+}
+
+/** Folds a just-finished session's bests into the cache, so offline sessions compare against them. */
+export function mergeCachedExerciseRecords(db: SQLiteDatabase, exerciseId: string, sessionBests: CachedRecords): void {
+  writeExerciseRecords(db, exerciseId, mergeCachedRecords(getCachedExerciseRecords(db, exerciseId), sessionBests));
 }
 
 export interface ResolvedToday {
