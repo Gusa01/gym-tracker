@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:unit
+
+  integration:
+    name: Integration tests (local Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # Boots a throwaway Postgres + Auth + REST stack in Docker and applies every
+      # migration in supabase/migrations from scratch. Services the tests never
+      # touch are excluded to keep startup fast.
+      - name: Start local Supabase
+        run: npx supabase start -x studio,imgproxy,realtime,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta
+
+      - name: Export local Supabase credentials
+        run: |
+          npx supabase status -o json > supabase-status.json
+          {
+            echo "EXPO_PUBLIC_SUPABASE_URL=$(jq -r .API_URL supabase-status.json)"
+            echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$(jq -r .ANON_KEY supabase-status.json)"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$(jq -r .SERVICE_ROLE_KEY supabase-status.json)"
+          } >> "$GITHUB_ENV"
+
+      - run: npm run test:integration
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --no-backup

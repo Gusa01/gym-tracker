@@ -1,5 +1,7 @@
 # Fit Tracker
 
+[![CI](https://github.com/Gusa01/fit-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Gusa01/fit-tracker/actions/workflows/ci.yml)
+
 A fitness tracking app built with Expo (React Native) and Supabase.
 
 ## Setup
@@ -37,9 +39,18 @@ npx supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB
 ## Running
 
 - Start the app: `npx expo start`
-- Run the test suite: `npm test`
+- Type-check: `npm run typecheck`
+- Unit tests (pure logic, no env vars or network needed): `npm run test:unit`
+- Integration tests: `npm run test:integration`
 
-  The Jest suite hits the live hosted Supabase project referenced in `.env.local` — it does not run against a local/Dockerized database. Make sure `.env.local` is filled in before running tests.
+  Integration tests are everything under `tests/db/` plus any `*.integration.test.ts`. They create and delete real users and rows, so they need a Supabase to talk to: locally they hit the hosted project referenced in `.env.local`. `npm test` runs both suites.
+
+### CI
+
+Every pull request and every push to `main` runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+- **checks**: type-check and unit tests.
+- **integration**: boots a throwaway local Supabase stack in Docker (`supabase start`), which applies every migration from scratch, then runs the integration suite against it. CI never touches the hosted project and needs no secrets.
 
 ## Migrations
 
