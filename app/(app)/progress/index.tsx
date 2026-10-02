@@ -12,7 +12,7 @@ export default function ProgressList() {
   const { session } = useAuthSession();
   const { summaries, isLoading, error, refetch } = useProgressSummary(session?.user.id);
 
-  if (isLoading) {
+  if (isLoading && summaries.length === 0) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator />

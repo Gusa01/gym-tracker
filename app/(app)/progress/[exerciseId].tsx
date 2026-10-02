@@ -40,7 +40,7 @@ export default function ExerciseProgressDetail() {
   const records = useMemo(() => (rows.length > 0 ? computeRecords(rows) : null), [rows]);
   const exerciseName = rows.length > 0 ? rows[rows.length - 1].exercise_name : '';
 
-  if (isLoading) {
+  if (isLoading && rows.length === 0) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator />
