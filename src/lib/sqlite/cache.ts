@@ -53,7 +53,10 @@ export async function refreshLocalCache(
 
   // A history failure must not block the routine cache refresh; it just leaves the
   // previous records snapshot in place for live PR detection.
-  const history = await listExerciseSetHistory(supabase, userId).catch(() => null);
+  const history = await listExerciseSetHistory(supabase, userId).catch((err) => {
+    console.warn('Could not refresh exercise records cache', err);
+    return null;
+  });
 
   db.withTransactionSync(() => {
     db.runSync('delete from routines_cache');
