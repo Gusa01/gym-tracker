@@ -24,6 +24,7 @@ import {
 import { Metric, RecordEntry } from '../../../src/lib/progress/types';
 
 const MAX_X_LABELS = 6;
+const Y_AXIS_LABEL_WIDTH = 36;
 
 export default function ExerciseProgressDetail() {
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
@@ -58,7 +59,8 @@ export default function ExerciseProgressDetail() {
     );
   }
 
-  const chartWidth = screenWidth - 32 - 40; // screen padding and y-axis labels
+  // screen padding 16x2, card padding 12x2 + border 1x2, y-axis labels (drawn outside `width`)
+  const chartWidth = screenWidth - 32 - 26 - Y_AXIS_LABEL_WIDTH;
   const labelStep = Math.max(1, Math.ceil(points.length / MAX_X_LABELS));
   const chartData = points.map((p, i) => ({ value: p.value, label: i % labelStep === 0 ? formatShortDate(p.date) : '' }));
   const minValue = points.length > 0 ? Math.min(...points.map((p) => p.value)) : 0;
@@ -106,6 +108,7 @@ export default function ExerciseProgressDetail() {
           <LineChart
             data={chartData}
             width={chartWidth}
+            yAxisLabelWidth={Y_AXIS_LABEL_WIDTH}
             height={200}
             color="#111"
             thickness={2}
