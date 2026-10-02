@@ -1,6 +1,6 @@
 # Fit Tracker
 
-[![CI](https://github.com/Gusa01/fit-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Gusa01/fit-tracker/actions/workflows/ci.yml)
+[![CI](https://github.com/Gusa01/gym-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Gusa01/gym-tracker/actions/workflows/ci.yml)
 
 A fitness tracking app built with Expo (React Native) and Supabase.
 
