@@ -122,8 +122,8 @@ export default function ExerciseProgressDetail() {
           />
           {selected && (
             <Text style={styles.selected}>
-              {formatShortDate(selected.date)} · {formatSourceSet(selected, metric)} ·{' '}
-              {formatMetricValue(selected.value, metric)}
+              {formatShortDate(selected.date)} · {formatSourceSet(selected, metric)}
+              {metric === 'e1rm' ? ` · ${formatMetricValue(selected.value, metric)}` : ''}
             </Text>
           )}
           {points.length === 1 && <Text style={styles.hint}>Seguí entrenando para ver la evolución</Text>}
@@ -141,7 +141,9 @@ export default function ExerciseProgressDetail() {
                   <Text style={styles.recordValue}>{formatMetricValue(entry.value, recordMetric)}</Text>
                 </View>
                 <Text style={styles.recordDetail}>
-                  {formatSourceSet(entry, recordMetric)} · {formatShortDate(entry.date)}
+                  {recordMetric === 'seconds' || recordMetric === 'reps'
+                    ? formatShortDate(entry.date)
+                    : `${formatSourceSet(entry, recordMetric)} · ${formatShortDate(entry.date)}`}
                 </Text>
               </View>
             ) : null
