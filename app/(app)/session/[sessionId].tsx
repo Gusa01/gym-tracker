@@ -5,11 +5,22 @@ import { getDatabase } from '../../../src/lib/sqlite/db';
 import { resolveToday } from '../../../src/lib/sqlite/cache';
 import { useSessionSets } from '../../../src/hooks/useSessionSets';
 import { SessionExerciseCard } from '../../../src/components/SessionExerciseCard';
+import { PrBanner } from '../../../src/components/PrBanner';
 
 export default function SessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const { dayName, exercises, loggedSets, weightByExercise, loading, loadForDay, logSet, completeSession } =
-    useSessionSets(sessionId);
+  const {
+    dayName,
+    exercises,
+    loggedSets,
+    weightByExercise,
+    loading,
+    loadForDay,
+    logSet,
+    completeSession,
+    prBanner,
+    dismissPrBanner,
+  } = useSessionSets(sessionId);
   const [resolvedDayName, setResolvedDayName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,33 +44,36 @@ export default function SessionScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{resolvedDayName ?? dayName ?? 'Entrenamiento'}</Text>
+    <View style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>{resolvedDayName ?? dayName ?? 'Entrenamiento'}</Text>
 
-      {exercises.map((exercise) => (
-        <SessionExerciseCard
-          key={exercise.id}
-          exercise={exercise}
-          initialWeight={weightByExercise[exercise.id] ?? null}
-          loggedSets={loggedSets}
-          onLogSet={(setIndex, setType, weight, reps, rir) =>
-            logSet(exercise.id, setIndex, setType, weight, reps, rir)
+        {exercises.map((exercise) => (
+          <SessionExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            initialWeight={weightByExercise[exercise.id] ?? null}
+            loggedSets={loggedSets}
+            onLogSet={(setIndex, setType, weight, reps, rir) =>
+              logSet(exercise.id, setIndex, setType, weight, reps, rir)
+            }
+          />
+        ))}
+
+        <Pressable
+          style={styles.finishButton}
+          onPress={() =>
+            Alert.alert('Terminar entrenamiento', '¿Marcar esta sesión como completada?', [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Terminar', onPress: handleFinish },
+            ])
           }
-        />
-      ))}
-
-      <Pressable
-        style={styles.finishButton}
-        onPress={() =>
-          Alert.alert('Terminar entrenamiento', '¿Marcar esta sesión como completada?', [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Terminar', onPress: handleFinish },
-          ])
-        }
-      >
-        <Text style={styles.finishButtonText}>Terminar entrenamiento</Text>
-      </Pressable>
-    </ScrollView>
+        >
+          <Text style={styles.finishButtonText}>Terminar entrenamiento</Text>
+        </Pressable>
+      </ScrollView>
+      <PrBanner banner={prBanner} onDismiss={dismissPrBanner} />
+    </View>
   );
 }
 
