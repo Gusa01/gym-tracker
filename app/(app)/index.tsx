@@ -2,6 +2,7 @@ import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView
 import { router } from 'expo-router';
 import { useHomeData } from '../../src/hooks/useHomeData';
 import { WeekCalendarStrip } from '../../src/components/WeekCalendarStrip';
+import { HomeProgressCard } from '../../src/components/HomeProgressCard';
 
 function formatShortDate(dateStr: string): string {
   const [, month, day] = dateStr.split('-');
@@ -116,6 +117,8 @@ export default function Home() {
                   ))}
                 </View>
               )}
+
+              <HomeProgressCard />
             </>
           ) : (
             <View style={styles.card}>
