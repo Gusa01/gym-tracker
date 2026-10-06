@@ -12,7 +12,8 @@
     "import-routine": "tsx scripts/import-routine.ts",
     "test:unit": "jest --selectProjects unit",
     "test:integration": "jest --selectProjects integration --runInBand",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed-demo": "tsx scripts/seed-demo-user.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -21,6 +22,7 @@
     "expo": "^57.0.22",
     "expo-constants": "~57.0.18",
     "expo-crypto": "~57.0.3",
+    "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.10",
     "expo-router": "^57.0.21",
     "expo-splash-screen": "~57.0.9",
@@ -32,9 +34,11 @@
     "react-native": "0.86.3",
     "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-gifted-charts": "^1.4.80",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
     "react-native-url-polyfill": "^4.0.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1"

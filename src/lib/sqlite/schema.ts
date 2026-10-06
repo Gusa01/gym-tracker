@@ -47,6 +47,14 @@ export const CREATE_TABLES_SQL = `
     consecutive_miss_count integer not null default 0
   );
 
+  create table if not exists exercise_records_cache (
+    exercise_id text primary key,
+    best_e1rm real,
+    best_weight real,
+    best_seconds real,
+    best_reps real
+  );
+
   create table if not exists pending_writes (
     id text primary key,
     entity text not null,
