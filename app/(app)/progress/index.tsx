@@ -1,8 +1,11 @@
+import { useMemo } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthSession } from '../../../src/hooks/useAuthSession';
 import { useProgressSummary } from '../../../src/hooks/useExerciseProgress';
+import { Sparkline } from '../../../src/components/Sparkline';
 import { formatDaysAgo, formatMetricValue } from '../../../src/lib/progress/format';
+import { sparklinesByExercise } from '../../../src/lib/progress/spotlight';
 import { Trend } from '../../../src/lib/progress/types';
 
 const TREND_ARROW: Record<Trend, string> = { up: '↑', flat: '→', down: '↓' };
@@ -10,7 +13,8 @@ const TREND_COLOR: Record<Trend, string> = { up: '#16a34a', flat: '#666', down: 
 
 export default function ProgressList() {
   const { session } = useAuthSession();
-  const { summaries, isLoading, error, refetch } = useProgressSummary(session?.user.id);
+  const { rows, summaries, isLoading, error, refetch } = useProgressSummary(session?.user.id);
+  const sparklines = useMemo(() => sparklinesByExercise(rows, summaries), [rows, summaries]);
 
   if (isLoading && summaries.length === 0) {
     return (
@@ -50,12 +54,14 @@ export default function ProgressList() {
             <Text style={styles.name}>{item.exerciseName}</Text>
             <Text style={styles.subtitle}>{formatDaysAgo(item.lastTrainedDate, today)}</Text>
           </View>
+          <Sparkline values={sparklines.get(item.exerciseId) ?? []} color={item.trend ? TREND_COLOR[item.trend] : '#666'} />
           {item.latestValue !== null && (
             <Text style={styles.value}>{formatMetricValue(item.latestValue, item.metric)}</Text>
           )}
           <Text style={[styles.arrow, item.trend ? { color: TREND_COLOR[item.trend] } : null]}>
             {item.trend ? TREND_ARROW[item.trend] : ' '}
           </Text>
+          <Text style={styles.chevron}>›</Text>
         </Pressable>
       )}
     />
@@ -81,6 +87,7 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1 },
   name: { fontSize: 16, fontWeight: '600' },
   subtitle: { color: '#666', marginTop: 2, fontSize: 12 },
-  value: { fontSize: 16, fontWeight: '600', marginRight: 12 },
+  value: { fontSize: 16, fontWeight: '600', marginHorizontal: 12 },
   arrow: { fontSize: 20, width: 20, textAlign: 'center' },
+  chevron: { fontSize: 22, color: '#999', marginLeft: 8 },
 });

@@ -9,9 +9,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { LineChart } from 'react-native-gifted-charts';
 import { useAuthSession } from '../../../src/hooks/useAuthSession';
 import { useExerciseProgress } from '../../../src/hooks/useExerciseProgress';
+import { ProgressChart } from '../../../src/components/ProgressChart';
 import { bestSetPerSession, metricKind, primaryMetric } from '../../../src/lib/progress/metrics';
 import { computeRecords } from '../../../src/lib/progress/records';
 import {
@@ -23,16 +23,12 @@ import {
 } from '../../../src/lib/progress/format';
 import { Metric, RecordEntry } from '../../../src/lib/progress/types';
 
-const MAX_X_LABELS = 6;
-const Y_AXIS_LABEL_WIDTH = 36;
-
 export default function ExerciseProgressDetail() {
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
   const { session } = useAuthSession();
   const { rows, isLoading, error, refetch } = useExerciseProgress(session?.user.id, exerciseId);
   const { width: screenWidth } = useWindowDimensions();
   const [toggle, setToggle] = useState<'e1rm' | 'weight'>('e1rm');
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const kind = rows.length > 0 ? metricKind(rows) : null;
   const metric: Metric | null = kind === 'weighted' ? toggle : kind ? primaryMetric(kind) : null;
@@ -59,12 +55,8 @@ export default function ExerciseProgressDetail() {
     );
   }
 
-  // screen padding 16x2, card padding 12x2 + border 1x2, y-axis labels (drawn outside `width`)
-  const chartWidth = screenWidth - 32 - 26 - Y_AXIS_LABEL_WIDTH;
-  const labelStep = Math.max(1, Math.ceil(points.length / MAX_X_LABELS));
-  const chartData = points.map((p, i) => ({ value: p.value, label: i % labelStep === 0 ? formatShortDate(p.date) : '' }));
-  const minValue = points.length > 0 ? Math.min(...points.map((p) => p.value)) : 0;
-  const selected = points[selectedIndex ?? points.length - 1];
+  // screen padding 16x2, card padding 12x2 + border 1x2
+  const chartWidth = screenWidth - 32 - 26;
 
   const recordRows: Array<{ metric: Metric; entry: RecordEntry | null }> = records
     ? kind === 'weighted'
@@ -90,10 +82,7 @@ export default function ExerciseProgressDetail() {
             <Pressable
               key={option}
               style={[styles.toggleOption, toggle === option && styles.toggleOptionActive]}
-              onPress={() => {
-                setToggle(option);
-                setSelectedIndex(null);
-              }}
+              onPress={() => setToggle(option)}
             >
               <Text style={[styles.toggleText, toggle === option && styles.toggleTextActive]}>
                 {TOGGLE_LABEL[option]}
@@ -105,31 +94,7 @@ export default function ExerciseProgressDetail() {
 
       {metric && points.length > 0 && (
         <View style={styles.card}>
-          <LineChart
-            data={chartData}
-            width={chartWidth}
-            yAxisLabelWidth={Y_AXIS_LABEL_WIDTH}
-            height={200}
-            color="#111"
-            thickness={2}
-            dataPointsColor="#111"
-            noOfSections={4}
-            yAxisOffset={Math.max(0, Math.floor(minValue * 0.9))}
-            initialSpacing={12}
-            spacing={points.length > 1 ? Math.max(24, (chartWidth - 24) / (points.length - 1)) : 24}
-            focusEnabled
-            showStripOnFocus
-            onFocus={(_item: unknown, index: number) => setSelectedIndex(index)}
-            xAxisLabelTextStyle={styles.axisText}
-            yAxisTextStyle={styles.axisText}
-          />
-          {selected && (
-            <Text style={styles.selected}>
-              {formatShortDate(selected.date)} · {formatSourceSet(selected, metric)}
-              {metric === 'e1rm' ? ` · ${formatMetricValue(selected.value, metric)}` : ''}
-            </Text>
-          )}
-          {points.length === 1 && <Text style={styles.hint}>Seguí entrenando para ver la evolución</Text>}
+          <ProgressChart key={metric} points={points} metric={metric} width={chartWidth} />
         </View>
       )}
 
@@ -174,9 +139,6 @@ const styles = StyleSheet.create({
   toggleTextActive: { color: '#fff' },
   card: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, overflow: 'hidden' },
   cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  axisText: { color: '#666', fontSize: 10 },
-  selected: { marginTop: 8, color: '#111', fontWeight: '600' },
-  hint: { marginTop: 4, color: '#666' },
   recordRow: { paddingVertical: 6 },
   recordHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   recordLabel: { fontWeight: '600' },
