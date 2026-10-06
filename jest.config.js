@@ -4,7 +4,8 @@
 // Regexes accept both path separators so the split also works on Windows.
 const DB_DIR = '[\\\\/]tests[\\\\/]db[\\\\/].*\\.test\\.ts$';
 const INTEGRATION_SUFFIX = '\\.integration\\.test\\.ts$';
-const IGNORED = ['/node_modules/', '/.expo/'];
+// .claude/ holds git worktrees: full copies of the repo whose tests must not run twice.
+const IGNORED = ['/node_modules/', '/.expo/', '[\\\\/]\\.claude[\\\\/]'];
 
 const base = {
   preset: 'ts-jest',
