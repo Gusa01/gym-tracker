@@ -10,6 +10,7 @@ export const PROGRESS_OFFLINE_MESSAGE = 'Conectate para ver tu progreso';
 // Both hooks refetch on focus (not just mount) so returning from a finished session shows it.
 // A request counter ensures an older in-flight fetch never overwrites newer state.
 export function useProgressSummary(userId: string | undefined) {
+  const [rows, setRows] = useState<ExerciseSetRow[]>([]);
   const [summaries, setSummaries] = useState<ExerciseSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +22,11 @@ export function useProgressSummary(userId: string | undefined) {
     setIsLoading(true);
     setError(null);
     try {
-      const result = summarizeExercises(await listExerciseSetHistory(supabase, userId));
-      if (requestId === latestRequest.current) setSummaries(result);
+      const history = await listExerciseSetHistory(supabase, userId);
+      if (requestId === latestRequest.current) {
+        setRows(history);
+        setSummaries(summarizeExercises(history));
+      }
     } catch {
       if (requestId === latestRequest.current) setError(PROGRESS_OFFLINE_MESSAGE);
     } finally {
@@ -36,7 +40,7 @@ export function useProgressSummary(userId: string | undefined) {
     }, [refetch])
   );
 
-  return { summaries, isLoading, error, refetch };
+  return { rows, summaries, isLoading, error, refetch };
 }
 
 export function useExerciseProgress(userId: string | undefined, exerciseId: string | undefined) {
