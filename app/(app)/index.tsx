@@ -110,10 +110,17 @@ export default function Home() {
               {recentActivity.length > 0 && (
                 <View style={styles.card}>
                   <Text style={styles.sectionTitle}>Actividad reciente</Text>
-                  {recentActivity.map((entry, index) => (
-                    <Text key={index} style={styles.activityRow}>
-                      {entry.dayName} — {formatShortDate(entry.sessionDate)}
-                    </Text>
+                  {recentActivity.map((entry) => (
+                    <Pressable
+                      key={entry.sessionId}
+                      style={styles.activityPressable}
+                      onPress={() => router.push(`/(app)/history/${entry.sessionId}` as any)}
+                    >
+                      <Text style={styles.activityRow}>
+                        {entry.dayName} — {formatShortDate(entry.sessionDate)}
+                      </Text>
+                      <Text style={styles.activityChevron}>›</Text>
+                    </Pressable>
                   ))}
                 </View>
               )}
@@ -187,6 +194,8 @@ const styles = StyleSheet.create({
   streakText: { color: '#92400e', fontWeight: '600' },
   sectionTitle: { fontWeight: '700', fontSize: 15 },
   activityRow: { color: '#333' },
+  activityPressable: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
+  activityChevron: { fontSize: 18, color: '#999' },
   banner: { width: '100%', gap: 8, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, padding: 16 },
   bannerText: { color: '#111' },
   bannerActions: { flexDirection: 'row', gap: 8 },
