@@ -114,7 +114,7 @@ export default function Home() {
                     <Pressable
                       key={entry.sessionId}
                       style={styles.activityPressable}
-                      onPress={() => router.push(`/(app)/history/${entry.sessionId}` as any)}
+                      onPress={() => router.push(`/(app)/history/${entry.sessionId}` as any, { withAnchor: true })}
                     >
                       <Text style={styles.activityRow}>
                         {entry.dayName} — {formatShortDate(entry.sessionDate)}
