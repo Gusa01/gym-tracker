@@ -93,6 +93,7 @@ describe('validateSetEdit', () => {
   it('rejects an empty or non-numeric weight', () => {
     expect(validateSetEdit({ weight: '', reps: '6', rir: 2 }, weighted)).toBe('Ingresá un peso válido.');
     expect(validateSetEdit({ weight: 'abc', reps: '6', rir: 2 }, weighted)).toBe('Ingresá un peso válido.');
+    expect(validateSetEdit({ weight: 'Infinity', reps: '6', rir: 2 }, weighted)).toBe('Ingresá un peso válido.');
   });
 
   it('rejects a negative weight', () => {

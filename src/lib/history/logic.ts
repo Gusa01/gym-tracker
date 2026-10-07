@@ -31,7 +31,7 @@ export function validateSetEdit(
   const timeBased = exercise.rep_unit === 'seconds';
   if (!timeBased) {
     const weight = Number(values.weight);
-    if (values.weight.trim() === '' || Number.isNaN(weight)) return 'Ingresá un peso válido.';
+    if (values.weight.trim() === '' || !Number.isFinite(weight)) return 'Ingresá un peso válido.';
     if (weight < 0) return 'El peso no puede ser negativo.';
   }
   const reps = Number(values.reps);
