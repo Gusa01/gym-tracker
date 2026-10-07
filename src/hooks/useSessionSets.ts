@@ -171,6 +171,7 @@ export function useSessionSets(sessionId: string | undefined) {
     if (!set) return;
     queueSetCorrection(getDatabase(), set, change);
     setLoggedSets((current) => applyCorrection(current, setId, change));
+    if (change.kind === 'delete') setPrBanner((b) => (b && b.id === setId ? null : b));
     syncNow(getDatabase(), supabase, userId).catch(() => {});
   }
 
