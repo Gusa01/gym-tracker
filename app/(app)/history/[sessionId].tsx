@@ -24,7 +24,7 @@ export default function SessionHistoryDetail() {
     );
   }
 
-  if (error || !detail) {
+  if (!detail) {
     return (
       <View style={styles.centered}>
         <Text style={styles.message}>{error ?? 'Conectate para ver tu historial'}</Text>
@@ -48,6 +48,12 @@ export default function SessionHistoryDetail() {
         <Text style={styles.back}>←</Text>
         <Text style={styles.title}>{formatSessionTitle(detail.sessionDate, detail.dayName)}</Text>
       </Pressable>
+
+      {error ? (
+        <Pressable style={styles.banner} onPress={refetch}>
+          <Text style={styles.bannerText}>No se pudo actualizar. Tocá para reintentar.</Text>
+        </Pressable>
+      ) : null}
 
       {corrected && (
         <Text style={styles.note}>Corregido. El peso sugerido no cambia; si quedó mal, ajustalo en tu próxima sesión.</Text>
@@ -92,6 +98,8 @@ const styles = StyleSheet.create({
   back: { fontSize: 22 },
   title: { fontSize: 20, fontWeight: '700', flexShrink: 1 },
   note: { color: '#166534', backgroundColor: '#f0fdf4', borderRadius: 8, padding: 10 },
+  banner: { backgroundColor: '#fef2f2', borderRadius: 8, padding: 10 },
+  bannerText: { color: '#991b1b', textAlign: 'center' },
   card: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, gap: 6 },
   exerciseName: { fontSize: 16, fontWeight: '700' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

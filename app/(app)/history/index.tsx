@@ -18,7 +18,7 @@ export default function HistoryList() {
     );
   }
 
-  if (error) {
+  if (error && sessions.length === 0) {
     return (
       <View style={styles.centered}>
         <Text style={styles.message}>{error}</Text>
@@ -37,6 +37,13 @@ export default function HistoryList() {
       keyExtractor={(item) => item.id}
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
+      ListHeaderComponent={
+        error ? (
+          <Pressable style={styles.banner} onPress={refetch}>
+            <Text style={styles.bannerText}>No se pudo actualizar. Tocá para reintentar.</Text>
+          </Pressable>
+        ) : null
+      }
       ListEmptyComponent={
         <Text style={styles.message}>Todavía no hay sesiones. Completá tu primera sesión para verla acá.</Text>
       }
@@ -72,6 +79,8 @@ const styles = StyleSheet.create({
   message: { textAlign: 'center', color: '#666', marginTop: 32 },
   retryButton: { backgroundColor: '#111', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20, marginTop: 16 },
   retryText: { color: '#fff', fontWeight: '600' },
+  banner: { backgroundColor: '#fef2f2', borderRadius: 8, padding: 10, marginBottom: 8 },
+  bannerText: { color: '#991b1b', textAlign: "center" },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
