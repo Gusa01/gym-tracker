@@ -18,6 +18,7 @@ export default function SessionScreen() {
     loadForDay,
     logSet,
     completeSession,
+    correctSet,
     prBanner,
     dismissPrBanner,
   } = useSessionSets(sessionId);
@@ -57,6 +58,7 @@ export default function SessionScreen() {
             onLogSet={(setIndex, setType, weight, reps, rir) =>
               logSet(exercise.id, setIndex, setType, weight, reps, rir)
             }
+            onCorrectSet={correctSet}
           />
         ))}
 

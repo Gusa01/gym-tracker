@@ -13,7 +13,10 @@ import { listSessionSets } from '../lib/sessions/queries';
 import { loadCurrentSession, saveCurrentSession } from '../lib/sessions/currentSessionStorage';
 import { LoggedSet, SetType } from '../lib/sessions/types';
 import { enqueueWrite } from '../lib/sqlite/pendingWrites';
-import { flushOnly } from '../lib/sync/syncService';
+import { flushOnly, syncNow } from '../lib/sync/syncService';
+import { applyCorrection } from '../lib/history/logic';
+import { queueSetCorrection } from '../lib/history/submitCorrection';
+import { SetCorrection } from '../lib/history/types';
 import { useAuthSession } from './useAuthSession';
 import { buildPrescribedSets } from '../lib/sessions/prescribedSets';
 import { isExerciseHit, computeWeightIncrement, computeNextExerciseState } from '../lib/progression/rules';
@@ -158,6 +161,19 @@ export function useSessionSets(sessionId: string | undefined) {
     if (userId) await flushOnly(getDatabase(), supabase).catch(() => {});
   }
 
+  /**
+   * Edits or soft-deletes an already-logged set. Never recomputes progression (spec §2); a deleted
+   * set's index becomes the next one to log again. Sync afterwards rebuilds the records cache.
+   */
+  async function correctSet(setId: string, change: SetCorrection) {
+    if (!userId) return;
+    const set = loggedSets.find((s) => s.id === setId);
+    if (!set) return;
+    queueSetCorrection(getDatabase(), set, change);
+    setLoggedSets((current) => applyCorrection(current, setId, change));
+    syncNow(getDatabase(), supabase, userId).catch(() => {});
+  }
+
   return {
     dayName,
     exercises,
@@ -167,6 +183,7 @@ export function useSessionSets(sessionId: string | undefined) {
     loadForDay,
     logSet,
     completeSession,
+    correctSet,
     prBanner,
     dismissPrBanner,
   };
