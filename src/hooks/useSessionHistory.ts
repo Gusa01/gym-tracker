@@ -21,6 +21,7 @@ export function useSessionHistory(userId: string | undefined) {
   const [loadMoreError, setLoadMoreError] = useState(false);
   const latestRequest = useRef(0);
   const nextPage = useRef(0);
+  const loadingMoreRef = useRef(false);
 
   const refetch = useCallback(async () => {
     if (!userId) return;
@@ -42,7 +43,8 @@ export function useSessionHistory(userId: string | undefined) {
   }, [userId]);
 
   const loadMore = useCallback(async () => {
-    if (!userId || !hasMore || isLoadingMore || isLoading) return;
+    if (!userId || !hasMore || isLoadingMore || isLoading || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     const requestId = latestRequest.current;
     setIsLoadingMore(true);
     setLoadMoreError(false);
@@ -56,6 +58,7 @@ export function useSessionHistory(userId: string | undefined) {
       // Keep the rows already shown; the list offers a retry row at the end (spec §5.2).
       if (requestId === latestRequest.current) setLoadMoreError(true);
     } finally {
+      loadingMoreRef.current = false;
       setIsLoadingMore(false);
     }
   }, [userId, hasMore, isLoadingMore, isLoading]);
