@@ -21,4 +21,5 @@ export interface LoggedSet {
   reps: number;
   rir: number | null;
   created_at: string;
+  is_deleted?: boolean;
 }

@@ -24,6 +24,7 @@ export async function listRecentTopSets(
     .select('*, workout_sessions!inner(status)')
     .eq('routine_exercise_id', routineExerciseId)
     .eq('set_type', 'top_set')
+    .eq('is_deleted', false)
     .eq('workout_sessions.status', 'completed')
     .order('created_at', { ascending: false })
     .limit(limit);

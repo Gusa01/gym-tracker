@@ -116,6 +116,7 @@ describe('listRecentCompletedSessions', () => {
 
     expect(result.map((r) => r.sessionDate)).toEqual(['2026-03-08', '2026-03-01']);
     expect(result.every((r) => r.dayName === day.name)).toBe(true);
+    expect(result.every((r) => typeof r.sessionId === 'string' && r.sessionId.length > 0)).toBe(true);
   });
 
   it('respects the limit parameter', async () => {

@@ -40,7 +40,7 @@ export function useHomeData() {
   const [switchDismissed, setSwitchDismissed] = useState(false);
   const [weekCalendar, setWeekCalendar] = useState<WeekCalendarDay[]>([]);
   const [weekProgress, setWeekProgress] = useState<number | null>(null);
-  const [recentActivity, setRecentActivity] = useState<{ sessionDate: string; dayName: string }[]>([]);
+  const [recentActivity, setRecentActivity] = useState<{ sessionId: string; sessionDate: string; dayName: string }[]>([]);
   const [consistencyStreak, setConsistencyStreak] = useState(0);
 
   const load = useCallback(async () => {
