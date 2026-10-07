@@ -28,7 +28,7 @@ export function SetEditor({ set, exercise, onSave, onDelete, onClose }: SetEdito
 
   useEffect(() => {
     if (set) setValues(valuesFrom(set));
-  }, [set]);
+  }, [set?.id]);
 
   if (!set || !exercise) return null;
 
