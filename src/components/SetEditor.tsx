@@ -41,6 +41,8 @@ export function SetEditor({ set, exercise, onSave, onDelete, onClose }: SetEdito
     setSaving(true);
     try {
       await onSave(editFromValues(values, exercise, set));
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar la corrección. Probá de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -56,6 +58,8 @@ export function SetEditor({ set, exercise, onSave, onDelete, onClose }: SetEdito
           setSaving(true);
           try {
             await onDelete();
+          } catch {
+            Alert.alert('Error', 'No se pudo guardar la corrección. Probá de nuevo.');
           } finally {
             setSaving(false);
           }
